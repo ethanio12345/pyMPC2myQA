@@ -1,0 +1,4 @@
+pyinstaller needs path to top level of project rather than subfolder that holds the packages (i.e. top level or project or top level with __init__)
+
+So, command for single file mode is;
+	pyinstaller ReadandConvertMPCFolder.py --clean -y -F --paths /path/to/pyMPC2myQA/

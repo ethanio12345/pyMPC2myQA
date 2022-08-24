@@ -1,0 +1,35 @@
+---
+# This here for if working on local desktop (minimise network traffic)
+local_parent_path: "C:/Users/60208787/Downloads/pyMPC2MyQA"
+
+# Parent path for code folder
+parent_path: "P:/4. Software/Code Development/Python Projects/pyMPC2myQA"
+
+# Where we are saving results to
+root_results_path: "//weshonc-afs0001/va_transfer/01 Physics Clinical QA"
+
+# Points to VA_TRANSFER network location
+root_va_transfer_path: "//weshonc-afs0001/va_transfer"
+
+# TM uses numbers to order folder view in explorer...this also needs a space
+number_in_results_path: '05 '
+
+# Name of machines as don't want to have to extract names from dict later...
+machines:
+- 'LA3'
+- 'LA4'
+- 'LA5'
+- 'CST'
+- 'OBK'
+
+# Links to machine paths under root VA transfer folder
+machine_paths: 
+- "/LA5/TDS/H191182/MPCChecks"
+- "/CST/TDS/H192361/MPCChecks"
+- "/OBK/TDS/H192362/MPCChecks"
+- "/LA3/TDS/H192972/MPCChecks"
+- "/LA4/TDS/H191733/MPCChecks"
+
+
+
+
