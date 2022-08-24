@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
-
+"""
 __created__ = 20220721
 __authour__ = 60208787
+__ver__ = 0.0.2
+"""
 
 import modules.classy as classy
 
@@ -10,12 +12,16 @@ from tqdm import tqdm
 import pandas as pd
 import openpyxl
 
-
+def make_df_from_template(template_openpyxl, sheetname):
+    template_df = pd.DataFrame(data = template_openpyxl[sheetname].values).set_index(0)
+    template_df.columns = template_df.iloc[0]
+    
+    return template_df[1:]
 
 def processing_MPC_folders(config):
     
-
-    logfile = config['parent_path'] +'/logfile_mpc_processed.txt'
+    
+    logfile = '/'.join([config['parent_path'], 'logfile_mpc_processed.txt'])
     log = classy.LogResults(logfile)
     
     # Log file above is good for individual checks, but list here is faster
@@ -42,8 +48,8 @@ def processing_MPC_folders(config):
             try:
                 MPC_obj = classy.MPC_results(i)
                 MPC_obj.write_MPC_to_MyQAFolder('/'.join([config['root_results_path'],
-                                                          '{} {}'.format(config['number_in_results_path'], machine_name),
-                                                          'MPC']
+                                                          '/{} {}'.format(config['number_in_results_path'], machine_name),
+                                                          '/MPC']
                                                          )
                                                 )
                 log.add_processed_folder_to_log(i)
@@ -52,11 +58,6 @@ def processing_MPC_folders(config):
             
         print('{} Failed in {} as no results CSV...check manually \n'.format(failed_folders_count,machine))
 
-def make_df_from_template(template_openpyxl, sheetname):
-    template_df = pd.DataFrame(data = template_openpyxl[sheetname].values).set_index(0)
-    template_df.columns = template_df.iloc[0]
-    
-    return template_df[1:]
 
 def processing_results_files(config):
     
@@ -75,128 +76,129 @@ def processing_results_files(config):
     #Search and sort for all results file in Results Folder
     for machine in config['machines']:
         
-        list_of_results_files = sorted([x for x in glob.glob('/'.join([config['root_results_path'],
-                                                                        machine,
-                                                                        "Results_*.xlsx"]
-                                                                      )
-                                                             )
+        print("Assessing {} myQA results".format(machine))
+        
+        # There is a {machine} within results_folder_path, so machine=machine to apply
+        list_of_results_files = sorted([x for x in glob.glob('/'.join([config['results_folder_path'].format(machine=machine),
+                                                                       'Results_*.xlsx']))
                                         if x not in loglist],
                                        reverse=True)
         
         # Read in template file for MyQA template and reuse for template here
         template = openpyxl.load_workbook(config['parent_path'] + '/Results/Template.xltx')
-        
-        for file in tqdm(list_of_results_files):
-            
-            # Append mode and replace sheet as it should already exist
-            with pd.ExcelWriter(file, engine='openpyxl',mode='a',if_sheet_exists='replace') as writer:
+        try:
+            for file in tqdm(list_of_results_files):
                 
-                # For each sheet *actually* in the results file
-                for sheet in writer.book.sheetnames:
+                # Append mode and replace sheet as it should already exist
+                with pd.ExcelWriter(file, engine='openpyxl',mode='a',if_sheet_exists='replace') as writer:
                     
-                    #After loop, will take ref date from last sheet
-                    ref_date = writer.book[sheet].cell(2,2).value
-                    
-                    # Case handing of actual file
-                    if sheet == '6xMVkVEnhancedCouch' and '6xMVkV' in writer.book.sheetnames:
+                    # For each sheet *actually* in the results file
+                    for sheet in writer.book.sheetnames:
                         
-                        #Create new df from existing workbook using 
-                        # not doing this as function as 
-                        template_df = make_df_from_template(template, '6xMVkV')
+                        #After loop, will take ref date from last sheet
+                        ref_date = writer.book[sheet].cell(2,2).value
                         
-                        #Itervals as 
-                        itervals = iter(writer.book['6xMVkV'].values)
-                        next(itervals)
-                        
-                        for item,val in itervals:
-                            template_df.loc[item] = val
-                        
-                        itervals = iter(writer.book['6xMVkVEnhancedCouch'].values)
-                        next(itervals)
-                        
-                        for item,val in itervals:
-                            if 'Enhanced' in item:
+                        # Case handing of actual file
+                        if sheet == '6xMVkVEnhancedCouch' and '6xMVkV' in writer.book.sheetnames:
+                            
+                            #Create new df from existing workbook using 
+                            # not doing this as function as 
+                            template_df = make_df_from_template(template, '6xMVkV')
+                            
+                            #Itervals as 
+                            itervals = iter(writer.book['6xMVkV'].values)
+                            next(itervals)
+                            
+                            for item,val in itervals:
                                 template_df.loc[item] = val
-    
-                        template_df.to_excel(writer,sheet_name='6xMVkV')
-                        writer.book.remove(writer.book['6xMVkVEnhancedCouch'])
-            
-                            # print('Enhanced Couch sheet renamed \n')
-                     
-                    elif sheet == '6xMVkVEnhancedCouch' and '6xMVkV' not in writer.book.sheetnames:
-                    
-    
-                        template_df = make_df_from_template(template, '6xMVkV')
+                            
+                            itervals = iter(writer.book['6xMVkVEnhancedCouch'].values)
+                            next(itervals)
+                            
+                            for item,val in itervals:
+                                if 'Enhanced' in item:
+                                    template_df.loc[item] = val
+        
+                            template_df.to_excel(writer,sheet_name='6xMVkV')
+                            writer.book.remove(writer.book['6xMVkVEnhancedCouch'])
                 
-                        itervals = iter(writer.book['6xMVkVEnhancedCouch'].values)
-                        next(itervals)
+                                # print('Enhanced Couch sheet renamed \n')
+                         
+                        elif sheet == '6xMVkVEnhancedCouch' and '6xMVkV' not in writer.book.sheetnames:
                         
-                        for item,val in itervals:
-                            template_df.loc[item] = val
+        
+                            template_df = make_df_from_template(template, '6xMVkV')
                     
-                        template_df.to_excel(writer,sheet_name='6xMVkV')
-                        writer.book.remove(writer.book['6xMVkVEnhancedCouch'])
-    
-                            # print('Enhanced Couch sheet renamed \n')
-                
-                    elif sheet == '6x':
-    
-                        template_df = make_df_from_template(template, '6x_MLC')
-                        itervals = iter(writer.book[sheet].values)
-                        next(itervals)
-                        
-                        for item,val in itervals:
-                            template_df.loc[item] = val
+                            itervals = iter(writer.book['6xMVkVEnhancedCouch'].values)
+                            next(itervals)
                             
-                        template_df.to_excel(writer,sheet_name='6x_MLC')
-                        writer.book.remove(writer.book['6x'])
+                            for item,val in itervals:
+                                template_df.loc[item] = val
                         
-                    elif sheet == '6x_MLC' and '6x' in writer.book.sheetnames:
-                        
-                        template_df = make_df_from_template(template, '6x')
-    
-                        itervals = iter(writer.book[sheet].values)
-                        next(itervals)
-                        
-                        for item,val in itervals:
-                            template_df.loc[item] = val
-                            
-                        template_df.to_excel(writer,sheet_name='6x_MLC')
-                        writer.book.remove(writer.book['6x'])
-    
-                        # print('MLC sheet renamed \n')
-                        
-                    elif sheet in template.sheetnames:
-                        template_df = make_df_from_template(template, sheet)
-    
-    
-                        itervals = iter(writer.book[sheet].values)
-                        next(itervals)
-                        
-                        for item,val in itervals:
-                            template_df.loc[item] = val
-                            
-                        template_df.to_excel(writer,sheet_name=sheet)
-    
-                            
-                        # print('MLC sheet renamed \n')
-                    else:
-                        print('Unknown sheet name')
+                            template_df.to_excel(writer,sheet_name='6xMVkV')
+                            writer.book.remove(writer.book['6xMVkVEnhancedCouch'])
+        
+                                # print('Enhanced Couch sheet renamed \n')
                     
-                #Pre-process file to ensure all relevant tabs are there...don't know if separation necessary
-    
-                for sheet in template.sheetnames:
-                    if sheet not in writer.book.sheetnames:
+                        elif sheet == '6x':
+        
+                            template_df = make_df_from_template(template, '6x_MLC')
+                            itervals = iter(writer.book[sheet].values)
+                            next(itervals)
+                            
+                            for item,val in itervals:
+                                template_df.loc[item] = val
+                                
+                            template_df.to_excel(writer,sheet_name='6x_MLC')
+                            writer.book.remove(writer.book['6x'])
+                            
+                        elif sheet == '6x_MLC' and '6x' in writer.book.sheetnames:
+                            
+                            template_df = make_df_from_template(template, '6x')
+        
+                            itervals = iter(writer.book[sheet].values)
+                            next(itervals)
+                            
+                            for item,val in itervals:
+                                template_df.loc[item] = val
+                                
+                            template_df.to_excel(writer,sheet_name='6x_MLC')
+                            writer.book.remove(writer.book['6x'])
+        
+                            # print('MLC sheet renamed \n')
+                            
+                        elif sheet in template.sheetnames:
+                            template_df = make_df_from_template(template, sheet)
+        
+        
+                            itervals = iter(writer.book[sheet].values)
+                            next(itervals)
+                            
+                            for item,val in itervals:
+                                template_df.loc[item] = val
+                                
+                            template_df.to_excel(writer,sheet_name=sheet)
+        
+                                
+                            # print('MLC sheet renamed \n')
+                        else:
+                            print('Unknown sheet name')
                         
-                        template_df = make_df_from_template(template, sheet)
-    
-                        
-                        template_df.loc['Reference Date'] = ref_date
-                        
-                        template_df.to_excel(writer,sheet_name=sheet)
-                
-                log.add_processed_folder_to_log(file)
-      
+                    #Pre-process file to ensure all relevant tabs are there...don't know if separation necessary
+        
+                    for sheet in template.sheetnames:
+                        if sheet not in writer.book.sheetnames:
+                            
+                            template_df = make_df_from_template(template, sheet)
+        
+                            
+                            template_df.loc['Reference Date'] = ref_date
+                            
+                            template_df.to_excel(writer,sheet_name=sheet)
+                    
+                    log.add_processed_folder_to_log(file)
+        except:
+            print('Failed')
 
         
 
@@ -213,7 +215,7 @@ if __name__ == '__main__':
     processing_MPC_folders(config)
     
     print('\n Starting processing of data for myQA \n')
-    # processing_results_files(config)
+    processing_results_files(config)
 
 
 
