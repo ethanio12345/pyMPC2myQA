@@ -15,8 +15,8 @@ results_folder_path: "//weshonc-afs0001/va_transfer/01 Physics Clinical QA/05 {m
 # Points to VA_TRANSFER network location
 root_va_transfer_path: "//weshonc-afs0001/va_transfer"
 
-# TM uses numbers to order folder view in explorer...this also needs a space
-number_in_results_path: '05 '
+# TM uses numbers to order folder view in explorer...this also needs no space
+number_in_results_path: '05'
 
 # Name of machines as don't want to have to extract names from dict later...
 machines:

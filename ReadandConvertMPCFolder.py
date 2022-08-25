@@ -12,6 +12,7 @@ from tqdm import tqdm
 import pandas as pd
 import openpyxl
 
+
 def make_df_from_template(template_openpyxl, sheetname):
     template_df = pd.DataFrame(data = template_openpyxl[sheetname].values).set_index(0)
     template_df.columns = template_df.iloc[0]
@@ -20,11 +21,11 @@ def make_df_from_template(template_openpyxl, sheetname):
 
 def processing_MPC_folders(config):
     
-    
+    # Log file assumed to live at top level of folder
     logfile = '/'.join([config['parent_path'], 'logfile_mpc_processed.txt'])
     log = classy.LogResults(logfile)
     
-    # Log file above is good for individual checks, but list here is faster
+    # Log file above is good for individual checks, but list here is faster for checking if files exist
     with open(logfile, 'r') as f:
         loglist = f.read().splitlines()
     
@@ -43,9 +44,10 @@ def processing_MPC_folders(config):
         failed_folders_count = 0 
         for i in tqdm(list_of_MPC_folders):
             
-            ### Try to generate an object for each folder...if fail (like no results),
+            ### Try to generate an object for each folder...if fail (like no results csv),
             ### then add the folder to a failed count
             try:
+                #Custom MPC module for these objects
                 MPC_obj = classy.MPC_results(i)
                 MPC_obj.write_MPC_to_MyQAFolder('/'.join([config['root_results_path'],
                                                           '/{} {}'.format(config['number_in_results_path'], machine_name),
@@ -62,9 +64,8 @@ def processing_MPC_folders(config):
 def processing_results_files(config):
     
     
-    
+    # Log file assumed to live at top level of folder
     logfile = config['parent_path']+'/logfile_myQA_processed.txt'
-    
     log = classy.LogResults(logfile)
     
     # Log file above is good for individual checks, but list here is faster
@@ -72,46 +73,47 @@ def processing_results_files(config):
         loglist = f.read().splitlines()
         
 
-    
-    #Search and sort for all results file in Results Folder
     for machine in config['machines']:
         
         print("Assessing {} myQA results".format(machine))
         
-        # There is a {machine} within results_folder_path, so machine=machine to apply
+        # There is a '{machine}' within results_folder_path variable, hence machine=machine to apply
         list_of_results_files = sorted([x for x in glob.glob('/'.join([config['results_folder_path'].format(machine=machine),
                                                                        'Results_*.xlsx']))
                                         if x not in loglist],
                                        reverse=True)
         
-        # Read in template file for MyQA template and reuse for template here
+        # Read in template xltx for MyQA and reuse here
         template = openpyxl.load_workbook(config['parent_path'] + '/Results/Template.xltx')
+        
         try:
             for file in tqdm(list_of_results_files):
                 
-                # Append mode and replace sheet as it should already exist
+                # Append mode (assumes file exists already) and replace sheet with new values
                 with pd.ExcelWriter(file, engine='openpyxl',mode='a',if_sheet_exists='replace') as writer:
                     
                     # For each sheet *actually* in the results file
                     for sheet in writer.book.sheetnames:
                         
-                        #After loop, will take ref date from last sheet
+                        #After fine sheet in loop, take ref date to write in
                         ref_date = writer.book[sheet].cell(2,2).value
                         
-                        # Case handing of actual file
+                        # Case handing of actual sheets names
+                        # Could do this in a ResultsFile object to keep main tidy, but eh
                         if sheet == '6xMVkVEnhancedCouch' and '6xMVkV' in writer.book.sheetnames:
                             
-                            #Create new df from existing workbook using 
-                            # not doing this as function as 
+                            #Create new df from existing workbook using function to keep more tidy
                             template_df = make_df_from_template(template, '6xMVkV')
                             
-                            #Itervals as 
+                            #As book is generator not list, need to force past the first item/val to extract vals in loop
                             itervals = iter(writer.book['6xMVkV'].values)
                             next(itervals)
                             
+                            # Loop and assign values to item name if item name is in the template
                             for item,val in itervals:
                                 template_df.loc[item] = val
                             
+                            #As book is generator not list, need to force past the first item/val to extract vals in loop
                             itervals = iter(writer.book['6xMVkVEnhancedCouch'].values)
                             next(itervals)
                             
@@ -129,6 +131,7 @@ def processing_results_files(config):
         
                             template_df = make_df_from_template(template, '6xMVkV')
                     
+                            #As book is generator not list, need to force past the first item/val to extract vals in loop
                             itervals = iter(writer.book['6xMVkVEnhancedCouch'].values)
                             next(itervals)
                             
@@ -143,6 +146,8 @@ def processing_results_files(config):
                         elif sheet == '6x':
         
                             template_df = make_df_from_template(template, '6x_MLC')
+
+                            #As book is generator not list, need to force past the first item/val to extract vals in loop
                             itervals = iter(writer.book[sheet].values)
                             next(itervals)
                             
@@ -156,6 +161,7 @@ def processing_results_files(config):
                             
                             template_df = make_df_from_template(template, '6x')
         
+                            #As book is generator not list, need to force past the first item/val to extract vals in loop
                             itervals = iter(writer.book[sheet].values)
                             next(itervals)
                             
@@ -171,6 +177,7 @@ def processing_results_files(config):
                             template_df = make_df_from_template(template, sheet)
         
         
+                            #As book is generator not list, need to force past the first item/val to extract vals in loop
                             itervals = iter(writer.book[sheet].values)
                             next(itervals)
                             
@@ -187,15 +194,13 @@ def processing_results_files(config):
                     #Pre-process file to ensure all relevant tabs are there...don't know if separation necessary
         
                     for sheet in template.sheetnames:
+                        
                         if sheet not in writer.book.sheetnames:
                             
                             template_df = make_df_from_template(template, sheet)
-        
-                            
-                            template_df.loc['Reference Date'] = ref_date
-                            
+                            template_df.loc['Reference Date'] = ref_date                            
                             template_df.to_excel(writer,sheet_name=sheet)
-                    
+                    # Finished processing results file and if everything ok by this stage, add file to log
                     log.add_processed_folder_to_log(file)
         except:
             print('Failed')
@@ -205,6 +210,7 @@ def processing_results_files(config):
             
 if __name__ == '__main__':
     
+    #Assumes config is in same folder as main script
     try:
         with open('config.yaml','r') as stream:
             config = yaml.safe_load(stream)
