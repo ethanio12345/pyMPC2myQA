@@ -22,7 +22,7 @@ def make_df_from_template(template_openpyxl, sheetname):
 def processing_MPC_folders(config):
     
     # Log file assumed to live at top level of folder
-    logfile = '/'.join([config['parent_path'], 'logfile_mpc_processed.txt'])
+    logfile = f"{config['parent_path']}/logfile_mpc_processed.txt"
     log = classy.LogResults(logfile)
     
     # Log file above is good for individual checks, but list here is faster for checking if files exist
@@ -49,23 +49,20 @@ def processing_MPC_folders(config):
             try:
                 #Custom MPC module for these objects
                 MPC_obj = classy.MPC_results(i)
-                MPC_obj.write_MPC_to_MyQAFolder('/'.join([config['root_results_path'],
-                                                          '/{} {}'.format(config['number_in_results_path'], machine_name),
-                                                          '/MPC']
-                                                         )
-                                                )
+                MPC_obj.write_MPC_to_MyQAFolder(f"{config['root_results_path']}/config['number_in_results_path'] {machine_name}/MPC")
+                                                
                 log.add_processed_folder_to_log(i)
             except:
                 failed_folders_count += 1
             
-        print('{} Failed in {} as no results CSV...check manually \n'.format(failed_folders_count,machine))
+        print(f"{failed_folders_count} failed in {failed_folders_count} as no results CSV...check manually \n")
 
 
 def processing_results_files(config):
     
     
     # Log file assumed to live at top level of folder
-    logfile = config['parent_path']+'/logfile_myQA_processed.txt'
+    logfile = f"{config['parent_path']}/logfile_myQA_processed.txt"
     log = classy.LogResults(logfile)
     
     # Log file above is good for individual checks, but list here is faster
@@ -75,16 +72,15 @@ def processing_results_files(config):
 
     for machine in config['machines']:
         
-        print("Assessing {} myQA results".format(machine))
+        print(f"Assessing {machine} myQA results")
         
         # There is a '{machine}' within results_folder_path variable, hence machine=machine to apply
-        list_of_results_files = sorted([x for x in glob.glob('/'.join([config['results_folder_path'].format(machine=machine),
-                                                                       'Results_*.xlsx']))
+        list_of_results_files = sorted([x for x in glob.glob(f"{config['results_folder_path'].format(machine=machine)}/'Results_*.xlsx")
                                         if x not in loglist],
-                                       reverse=True)
+                                        reverse=True)
         
         # Read in template xltx for MyQA and reuse here
-        template = openpyxl.load_workbook(config['parent_path'] + '/Results/Template.xltx')
+        template = openpyxl.load_workbook(f"{config['parent_path']}/Results/Template.xltx")
         
         try:
             for file in tqdm(list_of_results_files):
