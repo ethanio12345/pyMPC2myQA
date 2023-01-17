@@ -49,7 +49,7 @@ def processing_MPC_folders(config):
             try:
                 #Custom MPC module for these objects
                 MPC_obj = classy.MPC_results(i)
-                MPC_obj.write_MPC_to_MyQAFolder(f"{config['root_results_path']}/config['number_in_results_path'] {machine_name}/MPC")
+                MPC_obj.write_MPC_to_MyQAFolder(f"{config['root_results_path']}/{config['number_in_results_path']} {machine_name}/MPC")
                                                 
                 log.add_processed_folder_to_log(i)
             except:
