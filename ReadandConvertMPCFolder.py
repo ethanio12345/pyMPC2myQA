@@ -83,35 +83,42 @@ def processing_results_files(config):
         # Read in template xltx for MyQA and reuse here
         template = openpyxl.load_workbook(f"{config['parent_path']}/Results/Template.xltx")
         
-        # try:
-        for file in tqdm(list_of_results_files):
+        try:
+            for file in tqdm(list_of_results_files):
                 
                 # Append mode (assumes file exists already) and replace sheet with new values
-                with pd.ExcelWriter(file, engine='openpyxl',mode='a',if_sheet_exists='replace') as writer:
+                with pd.ExcelWriter(file, engine='xlsxwriter',mode='a',if_sheet_exists='replace') as writer:
                     
                     # For each sheet *actually* in the results file
                     for sheet in writer.book.sheetnames:
                         
                         #After fine sheet in loop, take ref date to write in
                         ref_date = writer.book[sheet].cell(2,2).value
-                        # Case handing of actual sheets names, only perform
+                        
+                        # Case handing of actual sheets names
                         # Could do this in a ResultsFile object to keep main tidy, but eh
                         if sheet == '6xMVkVEnhancedCouch' and '6xMVkV' in writer.book.sheetnames:
-
-                            sheet_6x = np.array(list(writer.book['6xMVkV'].values))
                             
+                            #Create new df from existing workbook using function to keep more tidy
+                            template_df = make_df_from_template(template, '6xMVkV')
                             
                             #As book is generator not list, need to force past the first item/val to extract vals in loop
-
-                            sheet_6enhanced = np.array(list(writer.book['6xMVkVEnhancedCouch'].values))
+                            itervals = iter(writer.book['6xMVkV'].values)
+                            next(itervals)
                             
-                            for i, item in enumerate(sheet_6enhanced):
-                                if 'Enhanced' in str(item[:,0]):
-                                    sheet_6x.append(item)
-                                    
-                            for row in sheet_6x:
-                                
-                            # template_df.to_excel(writer,sheet_name='6xMVkV')
+                            # Loop and assign values to item name if item name is in the template
+                            for item,val in itervals:
+                                template_df.loc[item] = val
+                            
+                            #As book is generator not list, need to force past the first item/val to extract vals in loop
+                            itervals = iter(writer.book['6xMVkVEnhancedCouch'].values)
+                            next(itervals)
+                            
+                            for item,val in itervals:
+                                if 'Enhanced' in item:
+                                    template_df.loc[item] = val
+        
+                            template_df.to_excel(writer,sheet_name='6xMVkV')
                             writer.book.remove(writer.book['6xMVkVEnhancedCouch'])
                 
                                 # print('Enhanced Couch sheet renamed \n')
@@ -192,8 +199,8 @@ def processing_results_files(config):
                             template_df.to_excel(writer,sheet_name=sheet)
                     # Finished processing results file and if everything ok by this stage, add file to log
                     log.add_processed_folder_to_log(file)
-        # except:
-        #     print('Failed')
+        except:
+            print('Failed')
 
         
 
