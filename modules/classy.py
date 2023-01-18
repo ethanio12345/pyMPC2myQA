@@ -45,7 +45,7 @@ class MPC_results:
         
     @property
     def check_for_results(self):
-        self.results_path = self.folder_path + "\Results.csv"
+        self.results_path = f"{self.folder_path}/Results.csv"
 
         datetime_now = datetime.datetime.now()
         result_datetime = self.datetime
@@ -128,9 +128,7 @@ class MPC_results:
         # Give list of MPC folders for single day
         # Generate MPC results for each check for each day
         
-        xlsx_path = MyQAFolder + '_'.join(['\Results',
-                                           'SN'+self.machine[-4:],
-                                           self.datetime.strftime('%Y%m%d-%H_%M')]) + '.xlsx'
+        xlsx_path = f"{MyQAFolder}/Results_SN{self.machine[-4:]}_{self.datetime.strftime('%Y%m%d-%H_%M')}.xlsx"
         MPC_df = pd.DataFrame(columns=['Value'])
         MPC_df.loc['Reference Date'] = self.datetime
         MPC_df = pd.concat([MPC_df, pd.DataFrame.from_dict(self.results,orient='index',columns=['Value'])])

@@ -72,7 +72,7 @@ def processing_results_files(config):
 
     for machine in config['machines']:
         
-        print(f"Assessing {machine} myQA results")
+        print(f"Processing {machine} myQA results")
         
         # There is a '{machine}' within results_folder_path variable, hence machine=machine to apply
         list_of_results_files = sorted([x for x in glob.glob(f"{config['results_folder_path'].format(machine=machine)}/'Results_*.xlsx")
@@ -86,7 +86,7 @@ def processing_results_files(config):
             for file in tqdm(list_of_results_files):
                 
                 # Append mode (assumes file exists already) and replace sheet with new values
-                with pd.ExcelWriter(file, engine='openpyxl',mode='a',if_sheet_exists='replace') as writer:
+                with pd.ExcelWriter(file, engine='xlsxwriter',mode='a',if_sheet_exists='replace') as writer:
                     
                     # For each sheet *actually* in the results file
                     for sheet in writer.book.sheetnames:
