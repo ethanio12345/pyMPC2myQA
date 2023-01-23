@@ -83,12 +83,10 @@ def processing_results_files(config):
         # Read in template xltx for MyQA and reuse here
         template = openpyxl.load_workbook(f"{config['parent_path']}/Results/Template.xltx")
         
-        try:
-            for file in tqdm(list_of_results_files):
-                
+        for file in tqdm(list_of_results_files):
+            try:
                 # Append mode (assumes file exists already) and replace sheet with new values
-                with pd.ExcelWriter(file, engine='xlsxwriter',mode='a',if_sheet_exists='replace') as writer:
-                    
+                with pd.ExcelWriter(file, engine='openpyxl',mode='a',if_sheet_exists='replace') as writer:
                     # For each sheet *actually* in the results file
                     for sheet in writer.book.sheetnames:
                         
@@ -103,74 +101,74 @@ def processing_results_files(config):
                             template_df = make_df_from_template(template, '6xMVkV')
                             
                             #As book is generator not list, need to force past the first item/val to extract vals in loop
-                            itervals = iter(writer.book['6xMVkV'].values)
-                            next(itervals)
+                            values_6x = pd.DataFrame(writer.book['6xMVkV'].values)
+                            # values_6x.set_index(values_6x.columns[0])
+                            values_6x.columns = values_6x.iloc[0]
+                            values_6x = values_6x.drop(0)
                             
-                            # Loop and assign values to item name if item name is in the template
-                            for item,val in itervals:
-                                template_df.loc[item] = val
+
                             
                             #As book is generator not list, need to force past the first item/val to extract vals in loop
-                            itervals = iter(writer.book['6xMVkVEnhancedCouch'].values)
-                            next(itervals)
+                            values_6xext = pd.DataFrame(writer.book['6xMVkVEnhancedCouch'].values)
+                            # values_6xext.set_index(values_6xext.columns[0])
+                            values_6xext.columns = values_6xext.iloc[0]
+                            values_6xext = values_6xext.drop(0)
                             
-                            for item,val in itervals:
-                                if 'Enhanced' in item:
-                                    template_df.loc[item] = val
-        
+                            for i,vals in template_df.values:
+                                if 'Enhanced' in vals[0]:
+                                    template_df.loc[i,vals[0]] = values_6xext[i,vals[0]]
+                                else:
+                                    template_df.loc[i,vals[0]] = values_6x[i,vals[0]]
+
                             template_df.to_excel(writer,sheet_name='6xMVkV')
                             writer.book.remove(writer.book['6xMVkVEnhancedCouch'])
                 
-                                # print('Enhanced Couch sheet renamed \n')
-                         
-                        elif sheet == '6xMVkVEnhancedCouch' and '6xMVkV' not in writer.book.sheetnames:
-                        
-        
-                            template_df = make_df_from_template(template, '6xMVkV')
-                    
-                            #As book is generator not list, need to force past the first item/val to extract vals in loop
-                            itervals = iter(writer.book['6xMVkVEnhancedCouch'].values)
-                            next(itervals)
-                            
-                            for item,val in itervals:
-                                template_df.loc[item] = val
-                        
-                            template_df.to_excel(writer,sheet_name='6xMVkV')
-                            writer.book.remove(writer.book['6xMVkVEnhancedCouch'])
-        
-                                # print('Enhanced Couch sheet renamed \n')
-                    
-                        elif sheet == '6x':
-        
-                            template_df = make_df_from_template(template, '6x_MLC')
 
-                            #As book is generator not list, need to force past the first item/val to extract vals in loop
-                            itervals = iter(writer.book[sheet].values)
-                            next(itervals)
-                            
-                            for item,val in itervals:
-                                template_df.loc[item] = val
-                                
-                            template_df.to_excel(writer,sheet_name='6x_MLC')
-                            writer.book.remove(writer.book['6x'])
-                            
-                        elif sheet == '6x_MLC' and '6x' in writer.book.sheetnames:
-                            
-                            template_df = make_df_from_template(template, '6x')
+                         
+                        # elif sheet == '6xMVkVEnhancedCouch' and '6xMVkV' not in writer.book.sheetnames:
+                        
         
-                            #As book is generator not list, need to force past the first item/val to extract vals in loop
-                            itervals = iter(writer.book[sheet].values)
-                            next(itervals)
+                        #     template_df = make_df_from_template(template, '6xMVkV')
+                    
+                        #     #As book is generator not list, need to force past the first item/val to extract vals in loop
+                        #     itervals = iter(writer.book['6xMVkVEnhancedCouch'].values)
+                        #     next(itervals)
                             
-                            for item,val in itervals:
-                                template_df.loc[item] = val
-                                
-                            template_df.to_excel(writer,sheet_name='6x_MLC')
-                            writer.book.remove(writer.book['6x'])
+                        #     for item,val in itervals:
+                        #         template_df.loc[item] = val
+                        
+                        #     template_df.to_excel(writer,sheet_name='6xMVkV')
+                        #     writer.book.remove(writer.book['6xMVkVEnhancedCouch'])
+                    
+                        # elif sheet == '6x':
         
-                            # print('MLC sheet renamed \n')
+                        #     template_df = make_df_from_template(template, '6x_MLC')
+
+                        #     #As book is generator not list, need to force past the first item/val to extract vals in loop
+                        #     itervals = iter(writer.book[sheet].values)
+                        #     next(itervals)
                             
-                        elif sheet in template.sheetnames:
+                        #     for item,val in itervals:
+                        #         template_df.loc[item] = val
+                                
+                        #     template_df.to_excel(writer,sheet_name='6x_MLC')
+                        #     writer.book.remove(writer.book['6x'])
+                            
+                        # elif sheet == '6x_MLC' and '6x' in writer.book.sheetnames:
+                            
+                        #     template_df = make_df_from_template(template, '6x')
+        
+                        #     #As book is generator not list, need to force past the first item/val to extract vals in loop
+                        #     itervals = iter(writer.book[sheet].values)
+                        #     next(itervals)
+                            
+                        #     for item,val in itervals:
+                        #         template_df.loc[item] = val
+                                
+                        #     template_df.to_excel(writer,sheet_name='6x_MLC')
+                        #     writer.book.remove(writer.book['6x'])
+                            
+                        # elif sheet in template.sheetnames:
                             template_df = make_df_from_template(template, sheet)
         
         
@@ -183,10 +181,9 @@ def processing_results_files(config):
                                 
                             template_df.to_excel(writer,sheet_name=sheet)
         
-                                
-                            # print('MLC sheet renamed \n')
                         else:
-                            print('Unknown sheet name')
+                            pass
+                            # print('Unknown sheet name')
                         
                     #Pre-process file to ensure all relevant tabs are there...don't know if separation necessary
         
@@ -199,8 +196,8 @@ def processing_results_files(config):
                             template_df.to_excel(writer,sheet_name=sheet)
                     # Finished processing results file and if everything ok by this stage, add file to log
                     log.add_processed_folder_to_log(file)
-        except:
-            print('Failed')
+            except:
+                print('Failed')
 
         
 
@@ -215,7 +212,7 @@ if __name__ == '__main__':
         pass
     print('\n Starting checks of MPC Folders \n')
 
-    processing_MPC_folders(config)
+    # processing_MPC_folders(config)
     
     print('\n Starting processing of data for myQA \n')
     processing_results_files(config)
