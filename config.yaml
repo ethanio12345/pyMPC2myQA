@@ -4,7 +4,7 @@
 local_parent_path: "C:/Users/60208787/Downloads/pyMPC2MyQA"
 
 # Parent path for code folder
-parent_path: "P:/4. Software/Code Development/Python Projects/pyMPC2myQA"
+parent_path: "//VIRTAPP-MDB086/Physics Data/4. Software/Code Development/Python Projects/pyMPC2myQA"
 
 # Where we are saving results to
 root_results_path: "//weshonc-afs0001/va_transfer/01 Physics Clinical QA"
