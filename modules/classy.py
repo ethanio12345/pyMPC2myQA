@@ -90,7 +90,7 @@ class MPC_results:
             self.datetime = datetime.datetime(int(year),int(month),int(day),int(hour),int(minute),int(second))
 
             if "Template" in mpc_folder_path:
-                self.measurement_type = folder_property[10].split("Template")[0]     ## Beam Check/Geometry Check/Enhanced Couch/MLC
+                self.measurement_type = folder_property[10].split("Template")[0]     ## Beam Check/Geometry Check/Enhanced Couch or in TB2.7 EnhancedMLC or TB 3.0 CollimationDevices Check. 
                 self.beam_energy = folder_property[10].split("Template")[-1]
             elif self.measurement_type == "GeometryCheck":
                 self.beam_energy = self.beam_energy + "MVkV"

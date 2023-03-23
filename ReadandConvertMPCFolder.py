@@ -125,50 +125,50 @@ def processing_results_files(config):
                 
 
                          
-                        # elif sheet == '6xMVkVEnhancedCouch' and '6xMVkV' not in writer.book.sheetnames:
+                        elif sheet == '6xMVkVEnhancedCouch' and '6xMVkV' not in writer.book.sheetnames:
                         
         
-                        #     template_df = make_df_from_template(template, '6xMVkV')
+                            template_df = make_df_from_template(template, '6xMVkV')
                     
-                        #     #As book is generator not list, need to force past the first item/val to extract vals in loop
-                        #     itervals = iter(writer.book['6xMVkVEnhancedCouch'].values)
-                        #     next(itervals)
+                            #As book is generator not list, need to force past the first item/val to extract vals in loop
+                            itervals = iter(writer.book['6xMVkVEnhancedCouch'].values)
+                            next(itervals)
                             
-                        #     for item,val in itervals:
-                        #         template_df.loc[item] = val
+                            for item,val in itervals:
+                                template_df.loc[item] = val
                         
-                        #     template_df.to_excel(writer,sheet_name='6xMVkV')
-                        #     writer.book.remove(writer.book['6xMVkVEnhancedCouch'])
+                            template_df.to_excel(writer,sheet_name='6xMVkV')
+                            writer.book.remove(writer.book['6xMVkVEnhancedCouch'])
                     
-                        # elif sheet == '6x':
+                        elif sheet == '6x':
         
-                        #     template_df = make_df_from_template(template, '6x_MLC')
+                            template_df = make_df_from_template(template, '6x_MLC')
 
-                        #     #As book is generator not list, need to force past the first item/val to extract vals in loop
-                        #     itervals = iter(writer.book[sheet].values)
-                        #     next(itervals)
+                            #As book is generator not list, need to force past the first item/val to extract vals in loop
+                            itervals = iter(writer.book[sheet].values)
+                            next(itervals)
                             
-                        #     for item,val in itervals:
-                        #         template_df.loc[item] = val
+                            for item,val in itervals:
+                                template_df.loc[item] = val
                                 
-                        #     template_df.to_excel(writer,sheet_name='6x_MLC')
-                        #     writer.book.remove(writer.book['6x'])
+                            template_df.to_excel(writer,sheet_name='6x_MLC')
+                            writer.book.remove(writer.book['6x'])
                             
-                        # elif sheet == '6x_MLC' and '6x' in writer.book.sheetnames:
+                        elif sheet == '6x_MLC' and '6x' in writer.book.sheetnames:
                             
-                        #     template_df = make_df_from_template(template, '6x')
+                            template_df = make_df_from_template(template, '6x')
         
-                        #     #As book is generator not list, need to force past the first item/val to extract vals in loop
-                        #     itervals = iter(writer.book[sheet].values)
-                        #     next(itervals)
+                            #As book is generator not list, need to force past the first item/val to extract vals in loop
+                            itervals = iter(writer.book[sheet].values)
+                            next(itervals)
                             
-                        #     for item,val in itervals:
-                        #         template_df.loc[item] = val
+                            for item,val in itervals:
+                                template_df.loc[item] = val
                                 
-                        #     template_df.to_excel(writer,sheet_name='6x_MLC')
-                        #     writer.book.remove(writer.book['6x'])
+                            template_df.to_excel(writer,sheet_name='6x_MLC')
+                            writer.book.remove(writer.book['6x'])
                             
-                        # elif sheet in template.sheetnames:
+                        elif sheet in template.sheetnames:
                             template_df = make_df_from_template(template, sheet)
         
         
