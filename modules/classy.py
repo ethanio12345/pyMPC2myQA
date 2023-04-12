@@ -6,6 +6,7 @@ Created on Fri Jul 22 11:46:28 2022
 """
 
 import datetime
+import numpy as np
 import pandas as pd
 import os
 import time
@@ -17,7 +18,7 @@ class MPC_results:
     def __init__(self, folder_path, results_path = None, machine = None, date = None, datetime = None, measurement_type = None, beam_energy = None, results = None, passed = True):
         
         self.path = os.path.abspath(folder_path)
-        self.file_name = self.path.split('\\')[-1]
+        self.file_name = os.path.basename(self.path)
         
 
         # From ReadMPC
@@ -102,23 +103,38 @@ class MPC_results:
     def read_results(self):
         results_path = self.results_path
         results = {}
-        with open(results_path) as csv_file:
-            csv_reader = csv.reader(csv_file, delimiter=',')
-            i = 0
-            for row in csv_reader:
-                if i > 0:
-                    test_name = (row[0].split("/")[-1]).split(" [")[0]
+
+        with open(results_path, newline="\n") as csv_file:
+            
+            next(csv_file)
+            lines = csv_file.readlines()
+
+            for row in lines:
+                
+                total_name = row.split(',')[0].split(" [")[0].split("/")
+           
+                if "CollimationDevicesGroup" == total_name[0]:
+                    if len(total_name) == 3:
+                        test_name = total_name[-1]
+                    elif len(total_name) == 4:
+                        test_name = f"{total_name[-2][-1]}-{total_name[-1]}"
+                    elif len(total_name) == 5:
+                        test_name = f"Pos{total_name[-3][-1]}-Bank{total_name[-2][-1]}-{total_name[-1]}"
+
+                    
+                else:
+                    test_name = total_name[-1]
                     if "MLCLeaf" in test_name:
-                        test_name = (row[0].split("/")[-2])[-1]+"-"+test_name
+                        test_name = f"{total_name[-2][-1]}-{test_name}"
                     elif "MLCBacklashLeaf" in test_name:
-                        test_name = (row[0].split("/")[-2])[-1]+"-"+test_name
+                        test_name = f"{total_name[-2][-1]}-{test_name}"
                     elif "EnhancedCouch" in row[0].split("/")[0]:
-                        test_name = "EnhancedCouch"+(row[0].split("/")[-1]).split(" [")[0]
-                        
-                    results[test_name] = float(row[1])
-                    if row[3] == "Failed":
-                        self.passed = False
-                i = i + 1
+                        test_name = f"EnhancedCouch {total_name[-1]}"
+                    
+
+                results[test_name] = float(row.split(',')[-2])
+                if row.split(',')[-1] == "Failed":
+                    self.passed = False
         self.results = results
     
         
@@ -128,7 +144,7 @@ class MPC_results:
         # Give list of MPC folders for single day
         # Generate MPC results for each check for each day
         
-        xlsx_path = f"{MyQAFolder}/Results_SN{self.machine[-4:]}_{self.datetime.strftime('%Y%m%d-%H_%M')}.xlsx"
+        xlsx_path = os.path.join(MyQAFolder,f"Results_SN{self.machine[-4:]}_{self.datetime.strftime('%Y%m%d-%H_%M')}.xlsx")
         MPC_df = pd.DataFrame(columns=['Value'])
         MPC_df.loc['Reference Date'] = self.datetime
         MPC_df = pd.concat([MPC_df, pd.DataFrame.from_dict(self.results,orient='index',columns=['Value'])])
@@ -183,3 +199,8 @@ class LogResults:
         self.write_to_log(new_result)
         self.close_log()
 
+if __name__ == '__main__':
+    mpc = MPC_results(r'V:\LA4\TDS\H191733\MPCChecks\NDS-WKS-SN1733-2023-03-24-07-15-09-0010-CollimationDevicesCheckTemplate6x')
+    mpc.process_folder()
+    mpc.read_results()
+    mpc.write_MPC_to_MyQAFolder(r'V:\01 Physics Clinical QA\05 LA4')

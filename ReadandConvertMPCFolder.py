@@ -141,7 +141,7 @@ def processing_results_files(config):
                             writer.book.remove(writer.book['6xMVkVEnhancedCouch'])
                     
                         elif sheet == '6x':
-        
+                             ### THIS IS THE ENHANCED MLC FILES
                             template_df = make_df_from_template(template, '6x_MLC')
 
                             #As book is generator not list, need to force past the first item/val to extract vals in loop
@@ -182,8 +182,9 @@ def processing_results_files(config):
                             template_df.to_excel(writer,sheet_name=sheet)
         
                         else:
+                            print('Unknown sheet name')
                             pass
-                            # print('Unknown sheet name')
+
                         
                     #Pre-process file to ensure all relevant tabs are there...don't know if separation necessary
         
