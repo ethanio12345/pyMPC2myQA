@@ -84,6 +84,7 @@ def processing_results_files(config):
         template = openpyxl.load_workbook(f"{config['parent_path']}/Results/Template.xltx")
         
         for file in tqdm(list_of_results_files):
+            print(file)
             try:
                 # Append mode (assumes file exists already) and replace sheet with new values
                 with pd.ExcelWriter(file, engine='openpyxl',mode='a',if_sheet_exists='replace') as writer:
@@ -102,26 +103,32 @@ def processing_results_files(config):
                             
                             #As book is generator not list, need to force past the first item/val to extract vals in loop
                             values_6x = pd.DataFrame(writer.book['6xMVkV'].values)
-                            # values_6x.set_index(values_6x.columns[0])
+                            values_6x = values_6x.set_index(values_6x.columns[0])
                             values_6x.columns = values_6x.iloc[0]
-                            values_6x = values_6x.drop(0)
-                            
+                            values_6x = values_6x[1:]
 
                             
                             #As book is generator not list, need to force past the first item/val to extract vals in loop
                             values_6xext = pd.DataFrame(writer.book['6xMVkVEnhancedCouch'].values)
-                            # values_6xext.set_index(values_6xext.columns[0])
+                            values_6xext = values_6xext.set_index(values_6xext.columns[0])
                             values_6xext.columns = values_6xext.iloc[0]
-                            values_6xext = values_6xext.drop(0)
+                            values_6xext = values_6xext[1:]
                             
-                            for i,vals in template_df.values:
-                                if 'Enhanced' in vals[0]:
-                                    template_df.loc[i,vals[0]] = values_6xext[i,vals[0]]
+                            for item in template_df.index:
+                                if 'Enhanced' in item:
+                                    try:
+                                        template_df.loc[item] = values_6xext.loc[item]
+                                    except KeyError:
+                                        print("Item doesn't exist in sheet")
+
                                 else:
-                                    template_df.loc[i,vals[0]] = values_6x[i,vals[0]]
+                                    try:
+                                        template_df.loc[item] = values_6x.loc[item]
+                                    except KeyError:
+                                        print("Item doesn't exist")
 
                             template_df.to_excel(writer,sheet_name='6xMVkV')
-                            writer.book.remove(writer.book['6xMVkVEnhancedCouch'])
+                            # writer.book.remove(writer.book['6xMVkVEnhancedCouch'])
                 
 
                          
@@ -156,7 +163,7 @@ def processing_results_files(config):
                             
                         elif sheet == '6x_MLC' and '6x' in writer.book.sheetnames:
                             
-                            template_df = make_df_from_template(template, '6x')
+                            template_df = make_df_from_template(template, '6x_MLC')
         
                             #As book is generator not list, need to force past the first item/val to extract vals in loop
                             itervals = iter(writer.book[sheet].values)
@@ -169,15 +176,19 @@ def processing_results_files(config):
                             writer.book.remove(writer.book['6x'])
                             
                         elif sheet in template.sheetnames:
-                            template_df = make_df_from_template(template, sheet)
+                            template_df = make_df_from_template(template, sheet).loc[:,:'Value'].dropna()
         
-        
+                            values = pd.DataFrame(writer.book[sheet].values)
+                            values = values.set_index(values.columns[0])
+                            values.columns = values.iloc[0]
+                            values = values[1:]
+                            values = values.loc[:,:'Value'].dropna()
                             #As book is generator not list, need to force past the first item/val to extract vals in loop
                             itervals = iter(writer.book[sheet].values)
                             next(itervals)
                             
-                            for item,val in itervals:
-                                template_df.loc[item] = val
+                            for item in values.index:
+                                template_df.loc[item] = values.loc[item]
                                 
                             template_df.to_excel(writer,sheet_name=sheet)
         
@@ -197,8 +208,8 @@ def processing_results_files(config):
                             template_df.to_excel(writer,sheet_name=sheet)
                     # Finished processing results file and if everything ok by this stage, add file to log
                     log.add_processed_folder_to_log(file)
-            except:
-                print('Failed')
+            except KeyError:
+                print('Sheet not could be found')
 
         
 
@@ -213,7 +224,7 @@ if __name__ == '__main__':
         pass
     print('\n Starting checks of MPC Folders \n')
 
-    # processing_MPC_folders(config)
+    processing_MPC_folders(config)
     
     print('\n Starting processing of data for myQA \n')
     processing_results_files(config)
