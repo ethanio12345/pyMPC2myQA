@@ -132,7 +132,7 @@ class MPC_results:
                         test_name = f"EnhancedCouch {total_name[-1]}"
                     
 
-                results[test_name] = float(row.split(',')[-2])
+                results[test_name] = float(row.split(',')[1])
                 if row.split(',')[-1] == "Failed":
                     self.passed = False
         self.results = results
