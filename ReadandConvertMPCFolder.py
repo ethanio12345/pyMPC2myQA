@@ -37,7 +37,7 @@ def processing_MPC_folders(config):
         #Search and sort for all folders under each machine path
         list_of_MPC_folders = sorted([f.path for f in os.scandir(machine_path) 
                               if f.is_dir() 
-                              if 'NDS-WKS-SN' in f.path 
+                              if 'NDS-WKS-SN' in f.path
                               if f.path not in loglist],
                               reverse=True)
         
@@ -50,13 +50,14 @@ def processing_MPC_folders(config):
             try:
                 #Custom MPC module for these objects
                 MPC_obj = classy.MPC_results(i)
-                MPC_obj.write_MPC_to_MyQAFolder(f"{config['root_results_path']}/{config['number_in_results_path']} {machine_name}/MPC")
-                                                
-                log.add_processed_folder_to_log(i)
+                MPC_obj.write_MPC_to_MyQAFolder(f"{config['root_results_path']}/{config['number_in_results_path']} {machine_name}/MPC/Raw")
+                with open(logfile, 'r') as f:
+                    loglist = f.write(i+"\n")                             
+                # log.add_processed_folder_to_log(i)
             except:
                 failed_folders_count += 1
             
-        print(f"{failed_folders_count} failed in {len(list_of_MPC_folders)} as no results CSV...check manually \n")
+        print(f"{failed_folders_count} failed in {len(list_of_MPC_folders)} from {machine_name} as no results CSV...check manually \n")
 
 
 def processing_results_files(config):
@@ -76,7 +77,7 @@ def processing_results_files(config):
         print(f"Processing {machine} myQA results")
         
         # There is a '{machine}' within results_folder_path variable, hence machine=machine to apply
-        list_of_results_files = sorted([x for x in glob.glob(f"{config['root_results_path']}/{config['number_in_results_path']} {machine}/MPC/Results_*.xlsx")
+        list_of_results_files = sorted([x for x in glob.glob(f"{config['root_results_path']}/{config['number_in_results_path']} {machine}/MPC/Raw/Results_*.xlsx")
                                         if x not in loglist],
                                         reverse=True)
         
@@ -84,32 +85,43 @@ def processing_results_files(config):
         template = openpyxl.load_workbook(f"{config['parent_path']}/Results/Template.xltx")
         
         for file in tqdm(list_of_results_files):
+            file_to_write_to = file.replace('\\','/').replace('/Raw','') 
             print(file)
-            try:
+            print(file_to_write_to)
+            results_file = openpyxl.load_workbook(file)
                 # Append mode (assumes file exists already) and replace sheet with new values
-                with pd.ExcelWriter(file, engine='openpyxl',mode='a',if_sheet_exists='replace') as writer:
-                    # For each sheet *actually* in the results file
-                    for sheet in writer.book.sheetnames:
-                        
-                        #After fine sheet in loop, take ref date to write in
-                        ref_date = writer.book[sheet].cell(2,2).value
+            with pd.ExcelWriter(file_to_write_to) as writer:
+                    
+                    # For each sheet *actually* in the MPC results file
+                    for sheet in results_file.sheetnames:
+
+                        #After first sheet in loop, take ref date to write in
+                        ref_date = results_file[sheet].cell(2,2).value
                         
                         # Case handing of actual sheets names
                         # Could do this in a ResultsFile object to keep main tidy, but eh
-                        if sheet == '6xMVkVEnhancedCouch' and '6xMVkV' in writer.book.sheetnames:
+                        if sheet == '6xMVkVEnhancedCouch' and '6xMVkV' in results_file.sheetnames:
                             
                             #Create new df from existing workbook using function to keep more tidy
                             template_df = make_df_from_template(template, '6xMVkV')
                             
                             #As book is generator not list, need to force past the first item/val to extract vals in loop
-                            values_6x = pd.DataFrame(writer.book['6xMVkV'].values)
+                            try:
+                                values_6x = pd.DataFrame(results_file['6xMVkV'].values)
+                            except KeyError:
+                                print(f'{sheet} sheet not found')
+                                break
                             values_6x = values_6x.set_index(values_6x.columns[0])
                             values_6x.columns = values_6x.iloc[0]
                             values_6x = values_6x[1:]
 
                             
                             #As book is generator not list, need to force past the first item/val to extract vals in loop
-                            values_6xext = pd.DataFrame(writer.book['6xMVkVEnhancedCouch'].values)
+                            try:
+                                values_6xext = pd.DataFrame(results_file['6xMVkVEnhancedCouch'].values)
+                            except KeyError:
+                                print(f'{sheet} sheet not found')
+                                break
                             values_6xext = values_6xext.set_index(values_6xext.columns[0])
                             values_6xext.columns = values_6xext.iloc[0]
                             values_6xext = values_6xext[1:]
@@ -120,75 +132,94 @@ def processing_results_files(config):
                                         template_df.loc[item] = values_6xext.loc[item]
                                     except KeyError:
                                         print("Item doesn't exist in sheet")
-
+                                        
                                 else:
                                     try:
                                         template_df.loc[item] = values_6x.loc[item]
                                     except KeyError:
-                                        print("Item doesn't exist")
+                                        print("Item doesn't exist in sheet")
+                                        
 
                             template_df.to_excel(writer,sheet_name='6xMVkV')
-                            # writer.book.remove(writer.book['6xMVkVEnhancedCouch'])
+                            results_file.remove(results_file['6xMVkVEnhancedCouch'])
                 
 
                          
-                        elif sheet == '6xMVkVEnhancedCouch' and '6xMVkV' not in writer.book.sheetnames:
+                        elif sheet == '6xMVkVEnhancedCouch' and '6xMVkV' not in results_file.sheetnames:
                         
+                            template_df = make_df_from_template(template, '6xMVkV').loc[:,:'Value'].dropna()
         
-                            template_df = make_df_from_template(template, '6xMVkV')
-                    
-                            #As book is generator not list, need to force past the first item/val to extract vals in loop
-                            itervals = iter(writer.book['6xMVkVEnhancedCouch'].values)
-                            next(itervals)
-                            
-                            for item,val in itervals:
-                                template_df.loc[item] = val
-                        
-                            template_df.to_excel(writer,sheet_name='6xMVkV')
-                            writer.book.remove(writer.book['6xMVkVEnhancedCouch'])
-                    
-                        elif sheet == '6x':
-                             ### THIS IS THE ENHANCED MLC FILES
-                            template_df = make_df_from_template(template, '6x_MLC')
-
-                            #As book is generator not list, need to force past the first item/val to extract vals in loop
-                            itervals = iter(writer.book[sheet].values)
-                            next(itervals)
-                            
-                            for item,val in itervals:
-                                template_df.loc[item] = val
-                                
-                            template_df.to_excel(writer,sheet_name='6x_MLC')
-                            writer.book.remove(writer.book['6x'])
-                            
-                        elif sheet == '6x_MLC' and '6x' in writer.book.sheetnames:
-                            
-                            template_df = make_df_from_template(template, '6x_MLC')
-        
-                            #As book is generator not list, need to force past the first item/val to extract vals in loop
-                            itervals = iter(writer.book[sheet].values)
-                            next(itervals)
-                            
-                            for item,val in itervals:
-                                template_df.loc[item] = val
-                                
-                            template_df.to_excel(writer,sheet_name='6x_MLC')
-                            writer.book.remove(writer.book['6x'])
-                            
-                        elif sheet in template.sheetnames:
-                            template_df = make_df_from_template(template, sheet).loc[:,:'Value'].dropna()
-        
-                            values = pd.DataFrame(writer.book[sheet].values)
+                            try:
+                                values = pd.DataFrame(results_file['6xMVkVEnhancedCouch'].values)
+                            except KeyError:
+                                print(f'{sheet} sheet not found')
+                                break                        
                             values = values.set_index(values.columns[0])
                             values.columns = values.iloc[0]
                             values = values[1:]
                             values = values.loc[:,:'Value'].dropna()
-                            #As book is generator not list, need to force past the first item/val to extract vals in loop
-                            itervals = iter(writer.book[sheet].values)
-                            next(itervals)
+
                             
-                            for item in values.index:
-                                template_df.loc[item] = values.loc[item]
+                            for item in template_df.index:
+                                try:
+                                    template_df.loc[item] = values.loc[item]
+                                except KeyError:
+                                    print('Some item either isn\'t in the template or the MPC sheet')
+                                
+                                
+                            template_df.to_excel(writer,sheet_name=sheet)
+                        
+                            template_df.to_excel(writer,sheet_name='6xMVkV')
+                            results_file.remove(results_file['6xMVkVEnhancedCouch'])
+                    
+                        elif sheet == '6x':
+                             ### THIS IS THE ENHANCED MLC FILES
+                            template_df = make_df_from_template(template, '6x_MLC').loc[:,:'Value'].dropna()
+
+        
+                            try:
+                                values = pd.DataFrame(results_file['6x'].values)
+                            except KeyError:
+                                print(f'{sheet} sheet not found')
+                                break                            
+                            values = values.set_index(values.columns[0])
+                            values.columns = values.iloc[0]
+                            values = values[1:]
+                            values = values.loc[:,:'Value'].dropna()
+
+                            
+                            for item in template_df.index:
+                                try:
+                                    template_df.loc[item] = values.loc[item]
+                                except KeyError:
+                                    print('Some item either isn\'t in the template or the MPC sheet')
+                                
+                            template_df.to_excel(writer,sheet_name=sheet)
+
+                            results_file.remove(results_file['6x'])
+                            
+                        elif sheet == '6x_MLC' and '6x' in results_file.sheetnames:
+                            
+                            results_file.remove(results_file['6x'])
+                            
+                        elif sheet in template.sheetnames:
+                            template_df = make_df_from_template(template, sheet).loc[:,:'Value'].dropna()
+        
+                            try:
+                                values = pd.DataFrame(results_file['sheet'].values)
+                            except KeyError:
+                                print(f'{sheet} sheet not found')
+                                break                            
+                            values = values.set_index(values.columns[0])
+                            values.columns = values.iloc[0]
+                            values = values[1:]
+                            values = values.loc[:,:'Value'].dropna()
+
+                            for item in template_df.index:
+                                try:
+                                    template_df.loc[item] = values.loc[item]
+                                except KeyError:
+                                    print('Some item either isn\'t in the template or the MPC sheet')
                                 
                             template_df.to_excel(writer,sheet_name=sheet)
         
@@ -196,20 +227,9 @@ def processing_results_files(config):
                             print('Unknown sheet name')
                             pass
 
-                        
-                    #Pre-process file to ensure all relevant tabs are there...don't know if separation necessary
-        
-                    for sheet in template.sheetnames:
-                        
-                        if sheet not in writer.book.sheetnames:
-                            
-                            template_df = make_df_from_template(template, sheet)
-                            template_df.loc['Reference Date'] = ref_date                            
-                            template_df.to_excel(writer,sheet_name=sheet)
-                    # Finished processing results file and if everything ok by this stage, add file to log
+
                     log.add_processed_folder_to_log(file)
-            except KeyError:
-                print('Sheet not could be found')
+
 
         
 
@@ -226,8 +246,8 @@ if __name__ == '__main__':
 
     processing_MPC_folders(config)
     
-    print('\n Starting processing of data for myQA \n')
-    processing_results_files(config)
+    # print('\n Starting processing of data for myQA \n')
+    # processing_results_files(config)
 
 
 
