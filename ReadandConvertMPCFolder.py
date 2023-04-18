@@ -2,7 +2,7 @@
 """
 __created__ = 20220721
 __authour__ = 60208787
-__ver__ = 0.0.2
+__ver__ = 0.0.3
 """
 
 import modules.classy as classy
