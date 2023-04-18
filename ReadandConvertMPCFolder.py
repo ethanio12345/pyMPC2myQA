@@ -7,6 +7,7 @@ __ver__ = 0.0.2
 
 import modules.classy as classy
 
+import logging
 import glob, os, yaml
 from tqdm import tqdm
 import pandas as pd
@@ -14,11 +15,16 @@ import openpyxl
 import numpy as np
 
 
-def make_df_from_template(template_openpyxl, sheetname):
-    template_df = pd.DataFrame(data = template_openpyxl[sheetname].values).set_index(0)
-    template_df.columns = template_df.iloc[0]
-    
-    return template_df[1:]
+def makde_df_from_openpyxl(openpyxl_file, sheetname):
+    try:
+        values = pd.DataFrame(openpyxl_file[sheetname].values)
+    except KeyError:
+        print(f'{sheetname} sheet not found')
+    else:   
+        values = values.set_index(values.columns[0])
+        values.columns = values.iloc[0]
+        values = values[1:].loc[:,:'Value'].dropna()
+        return values
 
 def processing_MPC_folders(config):
     
@@ -30,6 +36,8 @@ def processing_MPC_folders(config):
     with open(logfile, 'r') as f:
         loglist = f.read().splitlines()
     
+    # To spoof the list comprehension
+    loglist = []
     for machine in config['machine_paths']: 
         
         machine_path = config['root_va_transfer_path'] + machine
@@ -51,8 +59,8 @@ def processing_MPC_folders(config):
                 #Custom MPC module for these objects
                 MPC_obj = classy.MPC_results(i)
                 MPC_obj.write_MPC_to_MyQAFolder(f"{config['root_results_path']}/{config['number_in_results_path']} {machine_name}/MPC/Raw")
-                with open(logfile, 'r') as f:
-                    loglist = f.write(i+"\n")                             
+                # with open(logfile, 'r') as f:
+                    # loglist = f.write(i+"\n")                             
                 # log.add_processed_folder_to_log(i)
             except:
                 failed_folders_count += 1
@@ -71,6 +79,8 @@ def processing_results_files(config):
     with open(logfile, 'r') as f:
         loglist = f.read().splitlines()
         
+    # To spoof list comprehension        
+    loglist = []
 
     for machine in config['machines']:
         
@@ -85,150 +95,134 @@ def processing_results_files(config):
         template = openpyxl.load_workbook(f"{config['parent_path']}/Results/Template.xltx")
         
         for file in tqdm(list_of_results_files):
-            file_to_write_to = file.replace('\\','/').replace('/Raw','') 
-            print(file)
-            print(file_to_write_to)
+
+
+            file_to_write_to = file.replace('\\','/').replace('/Raw','/Results') 
+            logging.info(file)
+
+            
             results_file = openpyxl.load_workbook(file)
-                # Append mode (assumes file exists already) and replace sheet with new values
+
+            check_names = set(results_file.sheetnames)
+            check_temp = set(template.sheetnames)
+
             with pd.ExcelWriter(file_to_write_to) as writer:
-                    
                     # For each sheet *actually* in the MPC results file
                     for sheet in results_file.sheetnames:
 
-                        #After first sheet in loop, take ref date to write in
-                        ref_date = results_file[sheet].cell(2,2).value
+
+                        ref_date = results_file[results_file.sheetnames[0]].cell(2,2).value
+
                         
                         # Case handing of actual sheets names
                         # Could do this in a ResultsFile object to keep main tidy, but eh
                         if sheet == '6xMVkVEnhancedCouch' and '6xMVkV' in results_file.sheetnames:
                             
                             #Create new df from existing workbook using function to keep more tidy
-                            template_df = make_df_from_template(template, '6xMVkV')
+                            template_df = makde_df_from_openpyxl(template, '6xMVkV')
                             
                             #As book is generator not list, need to force past the first item/val to extract vals in loop
                             try:
-                                values_6x = pd.DataFrame(results_file['6xMVkV'].values)
-                            except KeyError:
-                                print(f'{sheet} sheet not found')
+                                values_6x = makde_df_from_openpyxl(results_file, '6xMVkV')
+                                
+                                #As book is generator not list, need to force past the first item/val to extract vals in loop
+                                values_6xext = makde_df_from_openpyxl(results_file, '6xMVkVEnhancedCouch')
+                            except AttributeError:
+                                print('Seems to not have generated values df...break')
                                 break
-                            values_6x = values_6x.set_index(values_6x.columns[0])
-                            values_6x.columns = values_6x.iloc[0]
-                            values_6x = values_6x[1:]
-
-                            
-                            #As book is generator not list, need to force past the first item/val to extract vals in loop
-                            try:
-                                values_6xext = pd.DataFrame(results_file['6xMVkVEnhancedCouch'].values)
-                            except KeyError:
-                                print(f'{sheet} sheet not found')
-                                break
-                            values_6xext = values_6xext.set_index(values_6xext.columns[0])
-                            values_6xext.columns = values_6xext.iloc[0]
-                            values_6xext = values_6xext[1:]
-                            
-                            for item in template_df.index:
-                                if 'Enhanced' in item:
-                                    try:
-                                        template_df.loc[item] = values_6xext.loc[item]
-                                    except KeyError:
-                                        print("Item doesn't exist in sheet")
-                                        
-                                else:
-                                    try:
-                                        template_df.loc[item] = values_6x.loc[item]
-                                    except KeyError:
-                                        print("Item doesn't exist in sheet")
-                                        
-
-                            template_df.to_excel(writer,sheet_name='6xMVkV')
-                            results_file.remove(results_file['6xMVkVEnhancedCouch'])
+                            else:
+                                for item in template_df.index:
+                                    if 'Enhanced' in item:
+                                        try:
+                                            template_df.loc[item] = values_6xext.loc[item]
+                                        except KeyError:
+                                            logging.warning(f"{item} doesn't exist in sheet")
+                                            
+                                    else:
+                                        try:
+                                            template_df.loc[item] = values_6x.loc[item]
+                                        except KeyError:
+                                            logging.warning(f"{item} doesn't exist in sheet")
+                                            
+                                check_names.add('6xMVkV')
+                                template_df.to_excel(writer,sheet_name='6xMVkV')
+                                # results_file.remove(results_file['6xMVkVEnhancedCouch'])
                 
 
                          
                         elif sheet == '6xMVkVEnhancedCouch' and '6xMVkV' not in results_file.sheetnames:
                         
-                            template_df = make_df_from_template(template, '6xMVkV').loc[:,:'Value'].dropna()
+                            template_df = makde_df_from_openpyxl(template, '6xMVkV')
         
-                            try:
-                                values = pd.DataFrame(results_file['6xMVkVEnhancedCouch'].values)
-                            except KeyError:
-                                print(f'{sheet} sheet not found')
-                                break                        
-                            values = values.set_index(values.columns[0])
-                            values.columns = values.iloc[0]
-                            values = values[1:]
-                            values = values.loc[:,:'Value'].dropna()
 
-                            
-                            for item in template_df.index:
-                                try:
-                                    template_df.loc[item] = values.loc[item]
-                                except KeyError:
-                                    print('Some item either isn\'t in the template or the MPC sheet')
+                            try:
+                                values = makde_df_from_openpyxl(results_file, '6xMVkVEnhancedCouch')
                                 
-                                
-                            template_df.to_excel(writer,sheet_name=sheet)
-                        
-                            template_df.to_excel(writer,sheet_name='6xMVkV')
-                            results_file.remove(results_file['6xMVkVEnhancedCouch'])
-                    
+                            except AttributeError:
+                                print('Seems to not have generated values df...break')
+                                break
+                            else:
+                                for item in template_df.index:
+                                        try:
+                                            template_df.loc[item] = values.loc[item]
+                                        except KeyError:
+                                            logging.warning(f"{item} doesn't exist in sheet")
+                                check_names.add('6xMVkV')
+                                template_df.to_excel(writer,sheet_name="6xMVkV")
+
                         elif sheet == '6x':
                              ### THIS IS THE ENHANCED MLC FILES
-                            template_df = make_df_from_template(template, '6x_MLC').loc[:,:'Value'].dropna()
+                            template_df = makde_df_from_openpyxl(template, '6x_MLC')
 
         
                             try:
-                                values = pd.DataFrame(results_file['6x'].values)
-                            except KeyError:
-                                print(f'{sheet} sheet not found')
-                                break                            
-                            values = values.set_index(values.columns[0])
-                            values.columns = values.iloc[0]
-                            values = values[1:]
-                            values = values.loc[:,:'Value'].dropna()
-
-                            
-                            for item in template_df.index:
-                                try:
-                                    template_df.loc[item] = values.loc[item]
-                                except KeyError:
-                                    print('Some item either isn\'t in the template or the MPC sheet')
+                                values = makde_df_from_openpyxl(results_file, sheet)
                                 
-                            template_df.to_excel(writer,sheet_name=sheet)
+                            except AttributeError:
+                                print('Seems to not have generated values df...break')
+                                break
+                            else:
+                                for item in template_df.index:
+                                        try:
+                                            template_df.loc[item] = values.loc[item]
+                                        except KeyError:
+                                            logging.warning(f"{item} doesn't exist in sheet")
+                                check_names.add("6x_MLC")
 
-                            results_file.remove(results_file['6x'])
+                                template_df.to_excel(writer,sheet_name="6x_MLC")
                             
-                        elif sheet == '6x_MLC' and '6x' in results_file.sheetnames:
-                            
-                            results_file.remove(results_file['6x'])
-                            
-                        elif sheet in template.sheetnames:
-                            template_df = make_df_from_template(template, sheet).loc[:,:'Value'].dropna()
-        
-                            try:
-                                values = pd.DataFrame(results_file['sheet'].values)
-                            except KeyError:
-                                print(f'{sheet} sheet not found')
-                                break                            
-                            values = values.set_index(values.columns[0])
-                            values.columns = values.iloc[0]
-                            values = values[1:]
-                            values = values.loc[:,:'Value'].dropna()
 
-                            for item in template_df.index:
-                                try:
-                                    template_df.loc[item] = values.loc[item]
-                                except KeyError:
-                                    print('Some item either isn\'t in the template or the MPC sheet')
-                                
-                            template_df.to_excel(writer,sheet_name=sheet)
-        
+                            
                         else:
-                            print('Unknown sheet name')
-                            pass
+                            template_df = makde_df_from_openpyxl(template, sheet)
+        
+                            try:
+                                values = makde_df_from_openpyxl(results_file, sheet)
+                                
+                            except AttributeError:
+                                print('Seems to not have generated values df...break')
+                                logging.warning('Seems to not have generated values df...break')
+
+                                break
+                            else:
+                                for item in template_df.index:
+                                        try:
+                                            template_df.loc[item] = values.loc[item]
+                                        except KeyError:
+                                            logging.warning(f"{item} doesn't exist in sheet")
+                                template_df.to_excel(writer,sheet_name=sheet)
+
+                    
+                    temp_not_in_result_file = check_temp-check_names
+
+                    for sheet in temp_not_in_result_file:
+                        template_df = makde_df_from_openpyxl(template, sheet)
+                        template_df.to_excel(writer,sheet_name=sheet)
+
+    
 
 
-                    log.add_processed_folder_to_log(file)
+                    # log.add_processed_folder_to_log(file)
 
 
         
@@ -242,12 +236,12 @@ if __name__ == '__main__':
             config = yaml.safe_load(stream)
     except:
         pass
-    print('\n Starting checks of MPC Folders \n')
-
-    processing_MPC_folders(config)
+    code_log = logging.basicConfig(filename='pympc_code.log', filemode='w', format='%(levelname)s - %(message)s',level=logging.INFO)
+    # print('\n Starting checks of MPC Folders \n')
+    # processing_MPC_folders(config)
     
-    # print('\n Starting processing of data for myQA \n')
-    # processing_results_files(config)
+    print('\n Starting processing of data for myQA \n')
+    processing_results_files(config)
 
-
+exi
 
