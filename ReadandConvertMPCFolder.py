@@ -48,7 +48,7 @@ def processing_MPC_folders(config):
         
         # Only using this as indicator, not as tracking failed files
         failed_folders_count = 0 
-        for i in tqdm(list_of_MPC_folders, smoothing=0):
+        for i in tqdm(list_of_MPC_folders, smoothing=0.2):
             
             ### Try to generate an object for each folder...if fail (like no results csv),
             ### then add the folder to a failed count
