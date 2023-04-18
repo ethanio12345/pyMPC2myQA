@@ -49,7 +49,7 @@ def processing_MPC_folders(config):
         # Only using this as indicator, not as tracking failed files
         failed_folders_count = 0 
         with open(logfile, 'a') as f:
-            for i in tqdm(list_of_MPC_folders, smoothing=0.2):
+            for i in tqdm(list_of_MPC_folders, smoothing=0.1):
                 
                 ### Try to generate an object for each folder...if fail (like no results csv),
                 ### then add the folder to a failed count
@@ -91,7 +91,7 @@ def processing_results_files(config):
         # Read in template xltx for MyQA and reuse here
         template = openpyxl.load_workbook(f"{config['parent_path']}/Results/Template.xltx")
         with open(logfile, 'a') as f:
-            for file in tqdm(list_of_results_files, smoothing=0):
+            for file in tqdm(list_of_results_files, smoothing=0.1):
 
                 mylogger.info(file)
                 file_to_write_to = file.replace('\\','/').replace('/Raw','') 
