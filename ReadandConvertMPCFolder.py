@@ -74,7 +74,7 @@ def processing_results_files(config):
     # Log file assumed to live at top level of folder
     logfile = f"{config['parent_path']}/logfile_myQA_processed.txt"
     log = classy.LogResults(logfile)
-    
+
     # Log file above is good for individual checks, but list here is faster
     with open(logfile, 'r') as f:
         loglist = f.read().splitlines()
@@ -98,8 +98,6 @@ def processing_results_files(config):
 
 
             file_to_write_to = file.replace('\\','/').replace('/Raw','/Results') 
-            logging.info(file)
-
             
             results_file = openpyxl.load_workbook(file)
 
@@ -136,13 +134,13 @@ def processing_results_files(config):
                                         try:
                                             template_df.loc[item] = values_6xext.loc[item]
                                         except KeyError:
-                                            logging.warning(f"{item} doesn't exist in sheet")
+                                            mylogger.warning(f"{item} doesn't exist in sheet")
                                             
                                     else:
                                         try:
                                             template_df.loc[item] = values_6x.loc[item]
                                         except KeyError:
-                                            logging.warning(f"{item} doesn't exist in sheet")
+                                            mylogger.warning(f"{item} doesn't exist in sheet")
                                             
                                 check_names.add('6xMVkV')
                                 template_df.to_excel(writer,sheet_name='6xMVkV')
@@ -166,7 +164,7 @@ def processing_results_files(config):
                                         try:
                                             template_df.loc[item] = values.loc[item]
                                         except KeyError:
-                                            logging.warning(f"{item} doesn't exist in sheet")
+                                            mylogger.warning(f"{item} doesn't exist in sheet")
                                 check_names.add('6xMVkV')
                                 template_df.to_excel(writer,sheet_name="6xMVkV")
 
@@ -186,7 +184,7 @@ def processing_results_files(config):
                                         try:
                                             template_df.loc[item] = values.loc[item]
                                         except KeyError:
-                                            logging.warning(f"{item} doesn't exist in sheet")
+                                            mylogger.warning(f"{item} doesn't exist in sheet")
                                 check_names.add("6x_MLC")
 
                                 template_df.to_excel(writer,sheet_name="6x_MLC")
@@ -201,7 +199,7 @@ def processing_results_files(config):
                                 
                             except AttributeError:
                                 print('Seems to not have generated values df...break')
-                                logging.warning('Seems to not have generated values df...break')
+                                mylogger.warning('Seems to not have generated values df...break')
 
                                 break
                             else:
@@ -209,7 +207,7 @@ def processing_results_files(config):
                                         try:
                                             template_df.loc[item] = values.loc[item]
                                         except KeyError:
-                                            logging.warning(f"{item} doesn't exist in sheet")
+                                            mylogger.warning(f"{item} doesn't exist in sheet")
                                 template_df.to_excel(writer,sheet_name=sheet)
 
                     
@@ -221,27 +219,47 @@ def processing_results_files(config):
 
     
 
-
+                    mylogger.info(f"{file}")
                     # log.add_processed_folder_to_log(file)
 
 
         
+class MyFilter(object):
+    def __init__(self, level):
+        self.__level = level
 
+    def filter(self, logRecord):
+        return logRecord.levelno == self.__level
             
 if __name__ == '__main__':
-    
+        
     #Assumes config is in same folder as main script
     try:
         with open('config.yaml','r') as stream:
             config = yaml.safe_load(stream)
     except:
         pass
-    code_log = logging.basicConfig(filename='pympc_code.log', filemode='w', format='%(levelname)s - %(message)s',level=logging.INFO)
+
+    mylogger = logging.getLogger('mylogger')
+
+    handler1 = logging.FileHandler("usr.log",mode='a')
+    handler1.setLevel(logging.INFO)
+    #only send through INFO level HERE
+    handler1.addFilter(MyFilter(logging.INFO))
+    handler1.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
+    mylogger.addHandler(handler1)
+
+    handler2 = logging.FileHandler("dev.log",mode='w')
+    #SEND THROUGH EVERYTHING ABOVE INFO HERE
+    handler2.setLevel(logging.INFO)
+    handler2.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
+
+    mylogger.addHandler(handler2)
+    
+    #SET GLOBAL LEVEL TO INFO
+    mylogger.setLevel(logging.INFO)
     # print('\n Starting checks of MPC Folders \n')
     # processing_MPC_folders(config)
     
     print('\n Starting processing of data for myQA \n')
     processing_results_files(config)
-
-exi
-
