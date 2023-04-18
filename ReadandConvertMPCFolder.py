@@ -29,7 +29,7 @@ def makde_df_from_openpyxl(openpyxl_file, sheetname):
 def processing_MPC_folders(config):
     
     # Log file assumed to live at top level of folder
-    logfile = "logfile_mpc_processed.txt" # f"{config['parent_path']}/
+    logfile = f"{config['parent_path']}/logfile_mpc_processed.txt"
     
     # Log file above is good for individual checks, but list here is faster for checking if files exist
     with open(logfile, 'r') as f:
@@ -70,7 +70,7 @@ def processing_results_files(config):
     
     
     # Log file assumed to live at top level of folder
-    logfile = "logfile_myQA_processed.txt" # f"{config['parent_path']}/
+    logfile = f"{config['parent_path']}/logfile_myQA_processed.txt"
 
 
     # Log file above is good for individual checks, but list here is faster
@@ -94,7 +94,7 @@ def processing_results_files(config):
             for file in tqdm(list_of_results_files, smoothing=0):
 
                 mylogger.info(file)
-                file_to_write_to = file.replace('\\','/').replace('/Raw','/Results') 
+                file_to_write_to = file.replace('\\','/').replace('/Raw','') 
                 
                 results_file = openpyxl.load_workbook(file)
 
