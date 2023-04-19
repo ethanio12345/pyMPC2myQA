@@ -40,37 +40,7 @@ class MPC_results:
         }
         
         self.process_folder()
-        # self.check_for_results()
-        if self.check_for_results:
-            self.read_results()
-        
-    @property
-    def check_for_results(self):
-        self.results_path = f"{self.folder_path}/Results.csv"
 
-        datetime_now = datetime.datetime.now()
-        result_datetime = self.datetime
-        difference = datetime_now - result_datetime
-
-        if difference.total_seconds() < 25 * 60:
-            wait_time = 30  # seconds
-            max_retries = 40  # maximum wait time of wait_time * max_retries (s)
-        else:
-            wait_time = 0  # seconds
-            max_retries = 1  # maximum wait time of wait_time * max_retries (s)
-
-        count = 0
-        results_found = False
-        while count < max_retries:
-            try:
-                with open(self.results_path, 'r') as f:
-                    count = max_retries
-                    results_found = True
-            except IOError:
-                time.sleep(wait_time)
-                count += 1
-
-        return results_found
     
     def process_folder(self):
         mpc_folder_path = self.path.split("\\")[-1]
