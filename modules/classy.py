@@ -41,6 +41,20 @@ class MPC_results:
         
         self.process_folder()
 
+        if self.check_for_results:
+            self.read_results()
+        
+    @property
+    def check_for_results(self):
+        self.results_path = f"{self.folder_path}/Results.csv"
+
+        try:
+            with open(self.results_path, 'r') as f:
+                results_found = True
+        except IOError:
+            pass
+
+        return results_found
     
     def process_folder(self):
         mpc_folder_path = self.path.split("\\")[-1]
