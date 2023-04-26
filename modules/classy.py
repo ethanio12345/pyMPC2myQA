@@ -96,7 +96,13 @@ class MPC_results:
             for row in lines:
                 
                 total_name = row.split(',')[0].split(" [")[0].split("/")
-           
+                test_name = total_name[-1]
+                
+                if "MLCLeaf" in test_name:
+                    test_name = f"{total_name[-2][-1]}-{test_name}"
+                elif "MLCBacklashLeaf" in test_name:
+                    test_name = f"{total_name[-2][-1]}-{test_name}"
+
                 if "CollimationDevicesGroup" == total_name[0]:
                     if len(total_name) == 3:
                         test_name = total_name[-1]
@@ -104,17 +110,8 @@ class MPC_results:
                         test_name = f"{total_name[-2][-1]}-{total_name[-1]}"
                     elif len(total_name) == 5:
                         test_name = f"Pos{total_name[-3][-1]}-Bank{total_name[-2][-1]}-{total_name[-1]}"
-
-                    
-                else:
-                    test_name = total_name[-1]
-                    if "MLCLeaf" in test_name:
-                        test_name = f"{total_name[-2][-1]}-{test_name}"
-                    elif "MLCBacklashLeaf" in test_name:
-                        test_name = f"{total_name[-2][-1]}-{test_name}"
-                    elif "EnhancedCouch" in row[0].split("/")[0]:
-                        test_name = f"EnhancedCouch {total_name[-1]}"
-                    
+                elif "EnhancedCouchGroup" == total_name[0]:
+                        test_name = f"EnhancedCouch{total_name[-1]}"
 
                 results[test_name] = float(row.split(',')[1])
                 if row.split(',')[-1] == "Failed":
@@ -143,48 +140,11 @@ class MPC_results:
             with pd.ExcelWriter(xlsx_path, engine='openpyxl',mode='a',if_sheet_exists='replace') as writer:
                 MPC_df.to_excel(writer,sheet_name=self.beam_energy)
 
-class LogResults:
-    def __init__(self,logfile_path, logfile = None):
-        self.logfile_path = logfile_path
-        self.logfile = logfile
 
-    def open_log_r(self):
-        try:
-            self.logfile = open(self.logfile_path, 'r')
-        except IOError:
-            self.open_log_a()
-            self.close_log()
-            self.logfile = open(self.logfile_path, 'r')
-
-    def open_log_a(self):
-        self.logfile = open(self.logfile_path, 'a+')
-
-    def write_to_log(self,new_result):
-        self.logfile.write(new_result+"\n")
-
-    def close_log(self):
-        self.logfile.close()
-
-    def check_if_previously_processed(self,new_result):
-        self.open_log_r()
-        loglist = self.logfile.readlines()
-        found = False
-
-        for line in loglist:
-            if new_result in line:
-                found = True
-                # print('New Result found')
-
-        self.close_log()
-        return found
-
-    def add_processed_folder_to_log(self,new_result):
-        self.open_log_a()
-        self.write_to_log(new_result)
-        self.close_log()
 
 if __name__ == '__main__':
     mpc = MPC_results(r'V:\LA4\TDS\H191733\MPCChecks\NDS-WKS-SN1733-2023-03-24-07-15-09-0010-CollimationDevicesCheckTemplate6x')
     mpc.process_folder()
     mpc.read_results()
-    mpc.write_MPC_to_MyQAFolder(r'V:\01 Physics Clinical QA\05 LA4')
+    print("ready and waiting")
+    # mpc.write_MPC_to_MyQAFolder(r'V:\01 Physics Clinical QA\05 LA4')
