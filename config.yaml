@@ -25,6 +25,7 @@ machines:
 - 'LA5'
 - 'CST'
 - 'OBK'
+- 'LA2'
 
 # Links to machine paths under root VA transfer folder
 machine_paths: 
@@ -33,7 +34,4 @@ machine_paths:
 - "/OBK/TDS/H192362/MPCChecks"
 - "/LA3/TDS/H192972/MPCChecks"
 - "/LA4/TDS/H191733/MPCChecks"
-
-
-
-
+- "/LA2/TDS/H196406/MPCChecks"

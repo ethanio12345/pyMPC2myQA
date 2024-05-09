@@ -2,7 +2,7 @@
 """
 __created__ = 20220721
 __authour__ = 60208787
-__ver__ = 0.0.3
+__ver__ = 0.1.1
 """
 
 import modules.classy as classy
@@ -12,7 +12,7 @@ import glob, os, yaml
 from tqdm import tqdm
 import pandas as pd
 import openpyxl
-import numpy as np
+
 
 
 def makde_df_from_openpyxl(openpyxl_file, sheetname):
@@ -26,7 +26,7 @@ def makde_df_from_openpyxl(openpyxl_file, sheetname):
         values = values[1:].loc[:,:'Value'].dropna()
         return values
 
-def processing_MPC_folders(config):
+def processing_MPC_folders(config,mpc_logger):
     
     # Log file assumed to live at top level of folder
     logfile = f"{config['parent_path']}/logfile_mpc_processed.txt" # 
@@ -55,12 +55,12 @@ def processing_MPC_folders(config):
             ### then add the folder to a failed count
             try:
                 #Custom MPC module for these objects
-                MPC_obj = classy.MPC_results(i)
+                MPC_obj = classy.MPC_results(file)
                 MPC_obj.write_MPC_to_MyQAFolder(f"{config['root_results_path']}/{config['number_in_results_path']} {machine_name}/MPC/Raw")
-                myQA_logger.info(file)
-            except:
+                mpc_logger.info(file)
+            except Exception as e:
                 failed_folders_count += 1
-                mylogger.error(f"{file} failed to read MPC")
+                mylogger.error(f"{file} failed to read MPC",exc_info=True)
             else:
                 continue
     
@@ -68,7 +68,7 @@ def processing_MPC_folders(config):
         print(f"{failed_folders_count} failed in {len(list_of_MPC_folders)} from {machine_name} as no results CSV...check manually \n")
 
 
-def processing_results_files(config):
+def processing_results_files(config,myQA_logger):
 
     # Log file assumed to live at top level of folder
     logfile = f"{config['parent_path']}/logfile_myQA_processed.txt" # 
@@ -108,22 +108,15 @@ def processing_results_file(file,template):
     with pd.ExcelWriter(file_to_write_to) as writer:
         # For each sheet *actually* in the MPC results file
         for sheet in results_file.sheetnames:
-
-
             ref_date = results_file[results_file.sheetnames[0]].cell(2,2).value
-
-            
             # Case handing of actual sheets names
             # Could do this in a ResultsFile object to keep main tidy, but eh
-            if sheet == '6xMVkVEnhancedCouch' and '6xMVkV' in results_file.sheetnames:
-                
+            if sheet == '6xMVkVEnhancedCouch' and '6xMVkV' in results_file.sheetnames:               
                 #Create new df from existing workbook using function to keep more tidy
-                template_df = makde_df_from_openpyxl(template, '6xMVkV')
-                
+                template_df = makde_df_from_openpyxl(template, '6xMVkV')            
                 #As book is generator not list, need to force past the first item/val to extract vals in loop
                 try:
                     values_6x = makde_df_from_openpyxl(results_file, '6xMVkV')
-                    
                     #As book is generator not list, need to force past the first item/val to extract vals in loop
                     values_6xext = makde_df_from_openpyxl(results_file, '6xMVkVEnhancedCouch')
                 except AttributeError:
@@ -135,14 +128,12 @@ def processing_results_file(file,template):
                             try:
                                 template_df.loc[item] = values_6xext.loc[item]
                             except KeyError:
-                                mylogger.warning(f"{item} doesn't exist in sheet {sheet}")
-                                
+                                mylogger.warning(f"{item} doesn't exist in sheet {sheet}")    
                         else:
                             try:
                                 template_df.loc[item] = values_6x.loc[item]
                             except KeyError:
-                                mylogger.warning(f"{item} doesn't exist in sheet {sheet}")
-                                
+                                mylogger.warning(f"{item} doesn't exist in sheet {sheet}")   
                     check_names.add('6xMVkV')
                     template_df.to_excel(writer,sheet_name='6xMVkV')
                     # results_file.remove(results_file['6xMVkVEnhancedCouch'])
@@ -152,7 +143,6 @@ def processing_results_file(file,template):
             elif sheet == '6xMVkVEnhancedCouch' and '6xMVkV' not in results_file.sheetnames:
             
                 template_df = makde_df_from_openpyxl(template, '6xMVkV')
-
 
                 try:
                     values = makde_df_from_openpyxl(results_file, '6xMVkVEnhancedCouch')
@@ -197,15 +187,27 @@ def processing_results_file(file,template):
             template_df = makde_df_from_openpyxl(template, sheet)
             template_df.to_excel(writer,sheet_name=sheet)
 
+    
+def logging_handler(logger,file_name: str,opts: str):
+    handler_dev = logging.FileHandler(file_name,mode=opts)
+    #SEND THROUGH EVERYTHING ABOVE INFO HERE
+    handler_dev.setLevel(logging.INFO)
+    handler_dev.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
+    logger.addHandler(handler_dev)
+    #SET GLOBAL LEVEL TO INFO
+    logger.setLevel(logging.INFO)
+    return logger
 
+def writing_handler(logger,file_name: str,opts: str):
+    handler_dev = logging.FileHandler(file_name,mode=opts)
+    #SEND THROUGH EVERYTHING ABOVE INFO HERE
+    handler_dev.setLevel(logging.INFO)
+    handler_dev.setFormatter(logging.Formatter('%(message)s'))
+    logger.addHandler(handler_dev)
+    #SET GLOBAL LEVEL TO INFO
+    logger.setLevel(logging.INFO)
+    return logger
 
-
-class MyFilter(object):
-    def __init__(self, level):
-        self.__level = level
-
-    def filter(self, logRecord):
-        return logRecord.levelno == self.__level
             
 if __name__ == '__main__':
         
@@ -223,36 +225,16 @@ if __name__ == '__main__':
 
     ##########
     # Handler two is for writing out error messages files
-    handler_dev = logging.FileHandler(f"{config['parent_path']}/dev.log",mode='w')
-    #SEND THROUGH EVERYTHING ABOVE INFO HERE
-    handler_dev.setLevel(logging.INFO)
-    handler_dev.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
-    mylogger.addHandler(handler_dev)
-    #SET GLOBAL LEVEL TO INFO
-    mylogger.setLevel(logging.INFO)
+    mylogger = logging_handler(mylogger, f"{config['parent_path']}/dev.log",opts='w')
 
-    #########
-    # Handler two is for writing out error messages files
-    handler_mpc = logging.FileHandler(f"{config['parent_path']}/logfile_mpc_processed.txt",mode='a')
-    #SEND THROUGH EVERYTHING ABOVE INFO HERE
-    handler_mpc.setLevel(logging.INFO)
-    handler_mpc.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
-    mpc_logger.addHandler(handler_mpc)
-    #SET GLOBAL LEVEL TO INFO
-    mpc_logger.setLevel(logging.INFO)
+    # For writing out processed files
+    mpc_logger = writing_handler(mpc_logger, f"{config['parent_path']}/logfile_mpc_processed.txt",opts='a')
+    myQA_logger = writing_handler(myQA_logger, f"{config['parent_path']}/logfile_myQA_processed.txt",opts='a')
 
-        # Handler two is for writing out error messages files
-    handler_myQA = logging.FileHandler(f"{config['parent_path']}/logfile_myQA_processed.txt",mode='a')
-    #SEND THROUGH EVERYTHING ABOVE INFO HERE
-    handler_myQA.setLevel(logging.INFO)
-    handler_myQA.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
-    myQA_logger.addHandler(handler_myQA)
-    #SET GLOBAL LEVEL TO INFO
-    myQA_logger.setLevel(logging.INFO)
 
 
     print('\n Starting checks of MPC Folders \n')
-    processing_MPC_folders(config)
+    processing_MPC_folders(config, mpc_logger)
     
     print('\n Starting processing of data for myQA \n')
-    processing_results_files(config)
+    processing_results_files(config, myQA_logger)
