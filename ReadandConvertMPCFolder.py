@@ -55,12 +55,12 @@ def processing_MPC_folders(config):
             ### then add the folder to a failed count
             try:
                 #Custom MPC module for these objects
-                MPC_obj = classy.MPC_results(i)
+                MPC_obj = classy.MPC_results(file)
                 MPC_obj.write_MPC_to_MyQAFolder(f"{config['root_results_path']}/{config['number_in_results_path']} {machine_name}/MPC/Raw")
                 myQA_logger.info(file)
-            except:
+            except Exception as e:
                 failed_folders_count += 1
-                mylogger.error(f"{file} failed to read MPC")
+                mylogger.error(f"{file} failed to read MPC",exc_info=True)
             else:
                 continue
     
@@ -206,6 +206,17 @@ class MyFilter(object):
 
     def filter(self, logRecord):
         return logRecord.levelno == self.__level
+    
+def logging_handler(logger,file_name: str,opts: str):
+    handler_dev = logging.FileHandler(file_name,mode=opts)
+    #SEND THROUGH EVERYTHING ABOVE INFO HERE
+    handler_dev.setLevel(logging.INFO)
+    handler_dev.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
+    logger.addHandler(handler_dev)
+    #SET GLOBAL LEVEL TO INFO
+    logger.setLevel(logging.INFO)
+    return logger
+
             
 if __name__ == '__main__':
         
@@ -223,32 +234,12 @@ if __name__ == '__main__':
 
     ##########
     # Handler two is for writing out error messages files
-    handler_dev = logging.FileHandler(f"{config['parent_path']}/dev.log",mode='w')
-    #SEND THROUGH EVERYTHING ABOVE INFO HERE
-    handler_dev.setLevel(logging.INFO)
-    handler_dev.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
-    mylogger.addHandler(handler_dev)
-    #SET GLOBAL LEVEL TO INFO
-    mylogger.setLevel(logging.INFO)
+    mylogger = logging_handler(mylogger, f"{config['parent_path']}/dev.log",opts='w')
 
-    #########
-    # Handler two is for writing out error messages files
-    handler_mpc = logging.FileHandler(f"{config['parent_path']}/logfile_mpc_processed.txt",mode='a')
-    #SEND THROUGH EVERYTHING ABOVE INFO HERE
-    handler_mpc.setLevel(logging.INFO)
-    handler_mpc.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
-    mpc_logger.addHandler(handler_mpc)
-    #SET GLOBAL LEVEL TO INFO
-    mpc_logger.setLevel(logging.INFO)
+    # For writing out processed files
+    mpc_logger = logging_handler(mpc_logger, f"{config['parent_path']}/logfile_mpc_processed.txt",opts='a')
+    myQA_logger = logging_handler(myQA_logger, f"{config['parent_path']}/logfile_myQA_processed.txt",opts='a')
 
-        # Handler two is for writing out error messages files
-    handler_myQA = logging.FileHandler(f"{config['parent_path']}/logfile_myQA_processed.txt",mode='a')
-    #SEND THROUGH EVERYTHING ABOVE INFO HERE
-    handler_myQA.setLevel(logging.INFO)
-    handler_myQA.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
-    myQA_logger.addHandler(handler_myQA)
-    #SET GLOBAL LEVEL TO INFO
-    myQA_logger.setLevel(logging.INFO)
 
 
     print('\n Starting checks of MPC Folders \n')
