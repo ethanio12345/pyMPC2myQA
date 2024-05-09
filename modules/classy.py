@@ -6,11 +6,8 @@ Created on Fri Jul 22 11:46:28 2022
 """
 
 import datetime
-import numpy as np
 import pandas as pd
 import os
-import time
-import csv
 
 
 
@@ -41,21 +38,15 @@ class MPC_results:
         }
         
         self.process_folder()
-
-        if self.check_for_results:
-            self.read_results()
-        
-    @property
-    def check_for_results(self):
-        self.results_path = f"{self.folder_path}/Results.csv"
-
         try:
-            with open(self.results_path, 'r') as f:
+            with open(f"{self.folder_path}/Results.csv", 'r') as f:
                 results_found = True
         except IOError:
             pass
+        else: 
+            self.read_results()
+        
 
-        return results_found
     
     def process_folder(self):
         mpc_folder_path = self.path.split("\\")[-1]
