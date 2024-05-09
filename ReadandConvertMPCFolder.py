@@ -108,22 +108,15 @@ def processing_results_file(file,template):
     with pd.ExcelWriter(file_to_write_to) as writer:
         # For each sheet *actually* in the MPC results file
         for sheet in results_file.sheetnames:
-
-
             ref_date = results_file[results_file.sheetnames[0]].cell(2,2).value
-
-            
             # Case handing of actual sheets names
             # Could do this in a ResultsFile object to keep main tidy, but eh
-            if sheet == '6xMVkVEnhancedCouch' and '6xMVkV' in results_file.sheetnames:
-                
+            if sheet == '6xMVkVEnhancedCouch' and '6xMVkV' in results_file.sheetnames:               
                 #Create new df from existing workbook using function to keep more tidy
-                template_df = makde_df_from_openpyxl(template, '6xMVkV')
-                
+                template_df = makde_df_from_openpyxl(template, '6xMVkV')            
                 #As book is generator not list, need to force past the first item/val to extract vals in loop
                 try:
                     values_6x = makde_df_from_openpyxl(results_file, '6xMVkV')
-                    
                     #As book is generator not list, need to force past the first item/val to extract vals in loop
                     values_6xext = makde_df_from_openpyxl(results_file, '6xMVkVEnhancedCouch')
                 except AttributeError:
@@ -135,14 +128,12 @@ def processing_results_file(file,template):
                             try:
                                 template_df.loc[item] = values_6xext.loc[item]
                             except KeyError:
-                                mylogger.warning(f"{item} doesn't exist in sheet {sheet}")
-                                
+                                mylogger.warning(f"{item} doesn't exist in sheet {sheet}")    
                         else:
                             try:
                                 template_df.loc[item] = values_6x.loc[item]
                             except KeyError:
-                                mylogger.warning(f"{item} doesn't exist in sheet {sheet}")
-                                
+                                mylogger.warning(f"{item} doesn't exist in sheet {sheet}")   
                     check_names.add('6xMVkV')
                     template_df.to_excel(writer,sheet_name='6xMVkV')
                     # results_file.remove(results_file['6xMVkVEnhancedCouch'])
@@ -152,7 +143,6 @@ def processing_results_file(file,template):
             elif sheet == '6xMVkVEnhancedCouch' and '6xMVkV' not in results_file.sheetnames:
             
                 template_df = makde_df_from_openpyxl(template, '6xMVkV')
-
 
                 try:
                     values = makde_df_from_openpyxl(results_file, '6xMVkVEnhancedCouch')
@@ -197,15 +187,6 @@ def processing_results_file(file,template):
             template_df = makde_df_from_openpyxl(template, sheet)
             template_df.to_excel(writer,sheet_name=sheet)
 
-
-
-
-class MyFilter(object):
-    def __init__(self, level):
-        self.__level = level
-
-    def filter(self, logRecord):
-        return logRecord.levelno == self.__level
     
 def logging_handler(logger,file_name: str,opts: str):
     handler_dev = logging.FileHandler(file_name,mode=opts)
