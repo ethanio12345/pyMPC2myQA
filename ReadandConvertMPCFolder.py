@@ -26,7 +26,7 @@ def makde_df_from_openpyxl(openpyxl_file, sheetname):
         values = values[1:].loc[:,:'Value'].dropna()
         return values
 
-def processing_MPC_folders(config,mpc):
+def processing_MPC_folders(config,mpc_logger):
     
     # Log file assumed to live at top level of folder
     logfile = f"{config['parent_path']}/logfile_mpc_processed.txt" # 
@@ -68,7 +68,7 @@ def processing_MPC_folders(config,mpc):
         print(f"{failed_folders_count} failed in {len(list_of_MPC_folders)} from {machine_name} as no results CSV...check manually \n")
 
 
-def processing_results_files(config):
+def processing_results_files(config,myQA_logger):
 
     # Log file assumed to live at top level of folder
     logfile = f"{config['parent_path']}/logfile_myQA_processed.txt" # 
@@ -234,7 +234,7 @@ if __name__ == '__main__':
 
 
     print('\n Starting checks of MPC Folders \n')
-    processing_MPC_folders(config)
+    processing_MPC_folders(config, mpc_logger)
     
     print('\n Starting processing of data for myQA \n')
-    processing_results_files(config)
+    processing_results_files(config, myQA_logger)
