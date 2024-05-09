@@ -2,7 +2,7 @@
 """
 __created__ = 20220721
 __authour__ = 60208787
-__ver__ = 0.0.3
+__ver__ = 0.1.1
 """
 
 import modules.classy as classy
@@ -12,7 +12,7 @@ import glob, os, yaml
 from tqdm import tqdm
 import pandas as pd
 import openpyxl
-import numpy as np
+
 
 
 def makde_df_from_openpyxl(openpyxl_file, sheetname):
@@ -26,7 +26,7 @@ def makde_df_from_openpyxl(openpyxl_file, sheetname):
         values = values[1:].loc[:,:'Value'].dropna()
         return values
 
-def processing_MPC_folders(config):
+def processing_MPC_folders(config,mpc):
     
     # Log file assumed to live at top level of folder
     logfile = f"{config['parent_path']}/logfile_mpc_processed.txt" # 
@@ -57,7 +57,7 @@ def processing_MPC_folders(config):
                 #Custom MPC module for these objects
                 MPC_obj = classy.MPC_results(file)
                 MPC_obj.write_MPC_to_MyQAFolder(f"{config['root_results_path']}/{config['number_in_results_path']} {machine_name}/MPC/Raw")
-                myQA_logger.info(file)
+                mpc_logger.info(file)
             except Exception as e:
                 failed_folders_count += 1
                 mylogger.error(f"{file} failed to read MPC",exc_info=True)
@@ -198,6 +198,16 @@ def logging_handler(logger,file_name: str,opts: str):
     logger.setLevel(logging.INFO)
     return logger
 
+def writing_handler(logger,file_name: str,opts: str):
+    handler_dev = logging.FileHandler(file_name,mode=opts)
+    #SEND THROUGH EVERYTHING ABOVE INFO HERE
+    handler_dev.setLevel(logging.INFO)
+    handler_dev.setFormatter(logging.Formatter('%(message)s'))
+    logger.addHandler(handler_dev)
+    #SET GLOBAL LEVEL TO INFO
+    logger.setLevel(logging.INFO)
+    return logger
+
             
 if __name__ == '__main__':
         
@@ -218,8 +228,8 @@ if __name__ == '__main__':
     mylogger = logging_handler(mylogger, f"{config['parent_path']}/dev.log",opts='w')
 
     # For writing out processed files
-    mpc_logger = logging_handler(mpc_logger, f"{config['parent_path']}/logfile_mpc_processed.txt",opts='a')
-    myQA_logger = logging_handler(myQA_logger, f"{config['parent_path']}/logfile_myQA_processed.txt",opts='a')
+    mpc_logger = writing_handler(mpc_logger, f"{config['parent_path']}/logfile_mpc_processed.txt",opts='a')
+    myQA_logger = writing_handler(myQA_logger, f"{config['parent_path']}/logfile_myQA_processed.txt",opts='a')
 
 
 
