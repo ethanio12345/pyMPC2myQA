@@ -8,7 +8,7 @@ __ver__ = 0.1.1
 import modules.classy as classy
 
 import logging
-import glob, os, yaml
+import glob, yaml
 from pathlib import Path
 from tqdm import tqdm
 import pandas as pd
