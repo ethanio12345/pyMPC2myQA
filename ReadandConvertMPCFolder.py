@@ -9,6 +9,7 @@ import modules.classy as classy
 
 import logging
 import glob, os, yaml
+from pathlib import Path
 from tqdm import tqdm
 import pandas as pd
 import openpyxl
@@ -39,8 +40,10 @@ def processing_MPC_folders(config,mpc_logger):
         
         machine_path = config['root_va_transfer_path'] + machine
         machine_name = machine.split('/')[1]
+        raw_machine_results_folder = f"{config['root_results_path']}/{config['number_in_results_path']} {machine_name}/MPC/Raw"
+
         #Search and sort for all folders under each machine path
-        list_of_MPC_folders = sorted([f.path for f in os.scandir(machine_path) 
+        list_of_MPC_folders = sorted([str(Path(f).resolve()) for f in os.scandir(machine_path) 
                               if f.is_dir() 
                               if 'NDS-WKS-SN' in f.path
                               if f.path not in loglist],
@@ -49,20 +52,25 @@ def processing_MPC_folders(config,mpc_logger):
         # Only using this as indicator, not as tracking failed files
         failed_folders_count = 0 
         # with open(logfile, 'a') as f:
-        for file in tqdm(list_of_MPC_folders, smoothing=0.1):
+        for folder in tqdm(list_of_MPC_folders, smoothing=0.1):
             
             ### Try to generate an object for each folder...if fail (like no results csv),
             ### then add the folder to a failed count
             try:
                 #Custom MPC module for these objects
-                MPC_obj = classy.MPC_results(file)
-                MPC_obj.write_MPC_to_MyQAFolder(f"{config['root_results_path']}/{config['number_in_results_path']} {machine_name}/MPC/Raw")
-                mpc_logger.info(file)
-            except Exception as e:
+                MPC_obj = classy.MPC_results(folder)
+                mpc_results = MPC_obj.read_results()
+            except FileNotFoundError:
                 failed_folders_count += 1
-                mylogger.error(f"{file} failed to read MPC",exc_info=True)
+                mylogger.error(f"{folder} has no results file")
             else:
-                continue
+                try:
+                    MPC_obj.write_MPC_to_MyQAFolder(mpc_results,raw_machine_results_folder)
+                    mpc_logger.info(folder)
+                except:
+                    mylogger.exception(f"{folder}")
+
+
     
             
         print(f"{failed_folders_count} failed in {len(list_of_MPC_folders)} from {machine_name} as no results CSV...check manually \n")
@@ -78,11 +86,13 @@ def processing_results_files(config,myQA_logger):
     
 
     for machine in config['machines']:
-        
+
+        raw_machine_results_folder = f"{config['root_results_path']}/{config['number_in_results_path']} {machine}/MPC/Raw"
+
         print(f"Processing {machine} myQA results")
         
         # There is a '{machine}' within results_folder_path variable, hence machine=machine to apply
-        list_of_results_files = sorted([x for x in glob.glob(f"{config['root_results_path']}/{config['number_in_results_path']} {machine}/MPC/Raw/Results_*.xlsx")
+        list_of_results_files = sorted([str(Path(x).resolve()) for x in glob.glob(f"{raw_machine_results_folder}/Results_*.xlsx")
                                         if x not in loglist],
                                         reverse=True)
         
@@ -98,7 +108,7 @@ def processing_results_file(file,template):
     # Assumes template is already prepped and in openpyxl format
 
     mylogger.info(file)
-    file_to_write_to = file.replace('\\','/').replace('/Raw','') 
+    file_to_write_to = file.replace('/Raw','') 
     
     results_file = openpyxl.load_workbook(file)
 

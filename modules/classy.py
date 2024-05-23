@@ -7,26 +7,30 @@ Created on Fri Jul 22 11:46:28 2022
 
 import datetime
 import pandas as pd
-import os
+import os, csv
+from pathlib import Path
 
 
 
 class MPC_results:
-    def __init__(self, folder_path, results_path = None, machine = None, date = None, datetime = None, measurement_type = None, beam_energy = None, results = None, passed = True):
+    def __init__(self, folder_path, results_path = None, machine = None, date = None, datetime = None, measurement_type = None, beam_energy = None, passed = None):
         
-        self.path = os.path.abspath(folder_path)
-        self.file_name = os.path.basename(self.path)
-        
-
         # From ReadMPC
-        self.folder_path = folder_path
-        self.results_path = results_path
+        self.folder_path = str(Path(folder_path).resolve())
+        self.has_results_file = False
+
+        if not Path(f"{self.folder_path}/Results.csv").is_file():
+            raise FileNotFoundError
+        else:
+            self.has_results_file = True
+
+        
         self.machine = machine
         self.date = date
         self.datetime = datetime
+        
         self.measurement_type = measurement_type
         self.beam_energy = beam_energy
-        self.results = results
         self.passed = passed        
         self.machineSN = {
             "2361": "Coast: 2361",
@@ -38,18 +42,10 @@ class MPC_results:
         }
         
         self.process_folder()
-        try:
-            with open(f"{self.folder_path}/Results.csv", 'r') as f:
-                results_found = True
-        except IOError:
-            pass
-        else: 
-            self.read_results()
-        
 
     
     def process_folder(self):
-        mpc_folder_path = self.path.split("\\")[-1]
+        mpc_folder_path = self.folder_path.split("\\")[-1]
         if "NDS-WKS-SN" in mpc_folder_path:
             folder_property = mpc_folder_path.split("-")
 
@@ -77,17 +73,15 @@ class MPC_results:
     
     
     def read_results(self):
-        results_path = self.results_path
-        results = {}
 
-        with open(results_path, newline="\n") as csv_file:
-            
-            next(csv_file)
-            lines = csv_file.readlines()
+        with open(f"{self.folder_path}/Results.csv", 'r') as f:
+            csv_data = csv.reader(f,delimiter=",")
+            next(csv_data)
+            results = {}
 
-            for row in lines:
+            for row in csv_data:
                 
-                total_name = row.split(',')[0].split(" [")[0].split("/")
+                total_name = row[0].split(" [")[0].split("/")
                 test_name = total_name[-1]
                 
                 if "MLCLeaf" in test_name:
@@ -105,14 +99,14 @@ class MPC_results:
                 elif "EnhancedCouchGroup" == total_name[0]:
                         test_name = f"EnhancedCouch{total_name[-1]}"
 
-                results[test_name] = float(row.split(',')[1])
-                if row.split(',')[-1] == "Failed":
+                results[test_name] = float(row[1])
+                if row[-1] == "Failed":
                     self.passed = False
-        self.results = results
-    
+        return results
+
         
     
-    def write_MPC_to_MyQAFolder(self, MyQAFolder):
+    def write_MPC_to_MyQAFolder(self, MPC_results, MyQAFolder):
     
         # Give list of MPC folders for single day
         # Generate MPC results for each check for each day
@@ -120,8 +114,7 @@ class MPC_results:
         xlsx_path = os.path.join(MyQAFolder,f"Results_SN{self.machine[-4:]}_{self.datetime.strftime('%Y%m%d-%H_%M')}.xlsx")
         MPC_df = pd.DataFrame(columns=['Value'])
         MPC_df.loc['Reference Date'] = self.datetime
-        MPC_df = pd.concat([MPC_df, pd.DataFrame.from_dict(self.results,orient='index',columns=['Value'])])
-        
+        MPC_df = pd.concat([MPC_df, pd.DataFrame.from_dict(MPC_results,orient='index',columns=['Value'])])
         if not os.path.isfile(xlsx_path):
             # Use writer mode if file doesn't exist
             with pd.ExcelWriter(xlsx_path, engine='openpyxl',mode='w') as writer:        
@@ -135,8 +128,13 @@ class MPC_results:
 
 
 if __name__ == '__main__':
-    mpc = MPC_results(r'V:\LA4\TDS\H191733\MPCChecks\NDS-WKS-SN1733-2023-03-24-07-15-09-0010-CollimationDevicesCheckTemplate6x')
-    mpc.process_folder()
-    mpc.read_results()
+    # mpc = MPC_results(r'//weshonc-afs0001/va_transfer/LA5/TDS/H191182/MPCChecks\NDS-WKS-SN1182-2024-05-13-15-03-46-0003-GeometryCheckTemplate6xMVkV')
+    mpc = MPC_results(r'V:\LA5\TDS\H191182\MPCChecks\NDS-WKS-SN1182-2024-05-13-15-03-46-0001-BeamCheckTemplate10xFFF')
+    results = mpc.read_results()
+    MPC_df = pd.DataFrame(columns=['Value'])
+    MPC_df.loc['Reference Date'] = "Test"
+    MPC_df = pd.concat([MPC_df, pd.DataFrame.from_dict(results,orient='index',columns=['Value'])])
+    print(MPC_df) # debugging
+    print(results) # debugging
     print("ready and waiting")
     # mpc.write_MPC_to_MyQAFolder(r'V:\01 Physics Clinical QA\05 LA4')
