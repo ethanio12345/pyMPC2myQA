@@ -8,7 +8,7 @@ __ver__ = 0.1.1
 import modules.classy as classy
 
 import logging
-import glob, os, yaml
+import glob, yaml
 from pathlib import Path
 from tqdm import tqdm
 import pandas as pd
@@ -29,25 +29,22 @@ def makde_df_from_openpyxl(openpyxl_file, sheetname):
 
 def processing_MPC_folders(config,mpc_logger):
     
-    # Log file assumed to live at top level of folder
-    logfile = f"{config['parent_path']}/logfile_mpc_processed.txt" # 
-    
-    # Log file above is good for individual checks, but list here is faster for checking if files exist
-    with open(logfile, 'r') as f:
+    # Log file is good for individual checks, but list here is faster for checking if files exist
+    with open(Path(config['parent_path'],"logfile_mpc_processed.txt"), 'r') as f:
         loglist = f.read().splitlines()
     
     for machine in config['machine_paths']: 
-        
-        machine_path = config['root_va_transfer_path'] + machine
+
         machine_name = machine.split('/')[1]
-        raw_machine_results_folder = f"{config['root_results_path']}/{config['number_in_results_path']} {machine_name}/MPC/Raw"
+        raw_machine_results_folder = Path(config['root_results_path'],f"{config['number_in_results_path']} {machine_name}","MPC","Raw")
 
         #Search and sort for all folders under each machine path
-        list_of_MPC_folders = sorted([str(Path(f).resolve()) for f in os.scandir(machine_path) 
-                              if f.is_dir() 
-                              if 'NDS-WKS-SN' in f.path
-                              if str(Path(f).resolve()) not in loglist],
-                              reverse=True)
+        list_of_MPC_folders = sorted(
+                                    [str(f.resolve()) for f in raw_machine_results_folder.iterdir()
+                                    if f.is_dir() 
+                                    if 'NDS-WKS-SN' in str(f)
+                                    if str(f) not in loglist],
+                                    reverse=True)
         
         # Only using this as indicator, not as tracking failed files
         failed_folders_count = 0 
@@ -69,33 +66,27 @@ def processing_MPC_folders(config,mpc_logger):
                     mpc_logger.info(folder)
                 except:
                     mylogger.exception(f"{folder}")
-
-
-    
             
         print(f"{failed_folders_count} failed in {len(list_of_MPC_folders)} from {machine_name} as no results CSV...check manually \n")
 
 
 def processing_results_files(config,myQA_logger):
 
-    # Log file assumed to live at top level of folder
-    logfile = f"{config['parent_path']}/logfile_myQA_processed.txt" # 
-
-    with open(logfile, 'r') as f:
+    with open(f"{config['parent_path']}/logfile_myQA_processed.txt", 'r') as f:
         loglist = f.read().splitlines()
     
 
     for machine in config['machines']:
 
-        raw_machine_results_folder = f"{config['root_results_path']}/{config['number_in_results_path']} {machine}/MPC/Raw"
-
         print(f"Processing {machine} myQA results")
-        
+        raw_machine_results_folder = Path(config['root_results_path'],f"{config['number_in_results_path']} {machine}","MPC","Raw")
         # There is a '{machine}' within results_folder_path variable, hence machine=machine to apply
-        list_of_results_files = sorted([str(Path(x).resolve()) for x in glob.glob(f"{raw_machine_results_folder}/Results_*.xlsx")
-                                        if x not in loglist],
-                                        reverse=True)
-        
+        list_of_results_files = sorted(
+                                    [str(x.resolve()) 
+                                    for x in raw_machine_results_folder.glob("Results_*.xlsx") # extractin
+                                    if str(x) not in loglist],
+                                    reverse=True)
+    
         # Read in template xltx for MyQA and reuse here
         template = openpyxl.load_workbook(f"{config['parent_path']}/Results/Template.xltx")
 

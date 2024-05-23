@@ -16,10 +16,10 @@ class MPC_results:
     def __init__(self, folder_path, results_path = None, machine = None, date = None, datetime = None, measurement_type = None, beam_energy = None, passed = None):
         
         # From ReadMPC
-        self.folder_path = str(Path(folder_path).resolve())
+        self.folder_path = Path(folder_path).resolve()
         self.has_results_file = False
 
-        if not Path(f"{self.folder_path}/Results.csv").is_file():
+        if not self.folder_path.joinpath("Results.csv").is_file():
             raise FileNotFoundError
         else:
             self.has_results_file = True
@@ -45,7 +45,7 @@ class MPC_results:
 
     
     def process_folder(self):
-        mpc_folder_path = self.folder_path.split("\\")[-1]
+        mpc_folder_path = str(self.folder_path).split("\\")[-1]
         if "NDS-WKS-SN" in mpc_folder_path:
             folder_property = mpc_folder_path.split("-")
 
@@ -74,7 +74,7 @@ class MPC_results:
     
     def read_results(self):
 
-        with open(f"{self.folder_path}/Results.csv", 'r') as f:
+        with open(self.folder_path.joinpath("Results.csv"), 'r') as f:
             csv_data = csv.reader(f,delimiter=",")
             next(csv_data)
             results = {}
