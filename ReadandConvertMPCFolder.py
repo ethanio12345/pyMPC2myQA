@@ -46,7 +46,7 @@ def processing_MPC_folders(config,mpc_logger):
         list_of_MPC_folders = sorted([str(Path(f).resolve()) for f in os.scandir(machine_path) 
                               if f.is_dir() 
                               if 'NDS-WKS-SN' in f.path
-                              if f.path not in loglist],
+                              if str(Path(f).resolve()) not in loglist],
                               reverse=True)
         
         # Only using this as indicator, not as tracking failed files
