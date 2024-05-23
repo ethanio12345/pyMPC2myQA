@@ -99,7 +99,7 @@ def processing_results_file(file,template):
     # Assumes template is already prepped and in openpyxl format
 
     mylogger.info(file)
-    file_to_write_to = file.replace('/Raw','') 
+    file_to_write_to = file.replace('\Raw','') 
     
     results_file = openpyxl.load_workbook(file)
 
