@@ -98,7 +98,6 @@ class MPC_results:
                         test_name = f"Pos{total_name[-3][-1]}-Bank{total_name[-2][-1]}-{total_name[-1]}"
                 elif "EnhancedCouchGroup" == total_name[0]:
                         test_name = f"EnhancedCouch{total_name[-1]}"
-
                 results[test_name] = float(row[1])
                 if row[-1] == "Failed":
                     self.passed = False
@@ -111,17 +110,16 @@ class MPC_results:
         # Give list of MPC folders for single day
         # Generate MPC results for each check for each day
         
-        xlsx_path = os.path.join(MyQAFolder,f"Results_SN{self.machine[-4:]}_{self.datetime.strftime('%Y%m%d-%H_%M')}.xlsx")
+        xlsx_path = Path(MyQAFolder,f"Results_SN{self.machine[-4:]}_{self.datetime.strftime('%Y%m%d-%H_%M')}.xlsx")
         MPC_df = pd.DataFrame(columns=['Value'])
         MPC_df.loc['Reference Date'] = self.datetime
         MPC_df = pd.concat([MPC_df, pd.DataFrame.from_dict(MPC_results,orient='index',columns=['Value'])])
-        if not os.path.isfile(xlsx_path):
+        if not xlsx_path.is_file():
             # Use writer mode if file doesn't exist
             with pd.ExcelWriter(xlsx_path, engine='openpyxl',mode='w') as writer:        
                 MPC_df.to_excel(writer,sheet_name=self.beam_energy)
         else:
             # Use append mode if file does exist
-    
             with pd.ExcelWriter(xlsx_path, engine='openpyxl',mode='a',if_sheet_exists='replace') as writer:
                 MPC_df.to_excel(writer,sheet_name=self.beam_energy)
 
