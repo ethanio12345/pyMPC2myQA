@@ -125,8 +125,6 @@ class MPC_results:
             with pd.ExcelWriter(xlsx_path, engine='openpyxl',mode='a',if_sheet_exists='replace') as writer:
                 MPC_df.to_excel(writer,sheet_name=self.beam_energy)
 
-
-
 if __name__ == '__main__':
     # mpc = MPC_results(r'//weshonc-afs0001/va_transfer/LA5/TDS/H191182/MPCChecks\NDS-WKS-SN1182-2024-05-13-15-03-46-0003-GeometryCheckTemplate6xMVkV')
     mpc = MPC_results(r'V:\LA5\TDS\H191182\MPCChecks\NDS-WKS-SN1182-2024-05-13-15-03-46-0001-BeamCheckTemplate10xFFF')
