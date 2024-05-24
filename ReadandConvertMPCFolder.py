@@ -8,7 +8,8 @@ __ver__ = 0.1.1
 import modules.classy as classy
 
 import logging
-import glob, yaml
+import yaml, re, xlsxwriter
+from datetime import datetime
 from pathlib import Path
 from tqdm import tqdm
 import pandas as pd
@@ -26,7 +27,7 @@ def update_template(template_df, values_df):
             mylogger.warning(f"{item} doesn't exist in the results sheet")
 
 
-def makde_df_from_openpyxl(openpyxl_file, sheetname):
+def make_df_from_openpyxl(openpyxl_file, sheetname):
     try:
         values = pd.DataFrame(openpyxl_file[sheetname].values)
     except KeyError:
@@ -51,11 +52,18 @@ def processing_MPC_folders(config,mpc_logger):
 
         #Search and sort for all folders under each machine path
         list_of_MPC_folders = sorted(
-                                    [str(f.resolve()) for f in mpc_folders.iterdir()
+                                    [f.resolve() for f in mpc_folders.iterdir()
                                     if f.is_dir() 
                                     if 'NDS-WKS-SN' in str(f)
                                     if str(f) not in loglist],
                                     reverse=True)
+        
+        matches = re.findall(r'\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}', str(list_of_MPC_folders))
+        unique_sessions = set(matches)
+        mpc_data_sessions = {i:[] for i in unique_sessions}
+
+        for i in list_of_MPC_folders:
+            mpc_data_sessions[re.search(r'\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}',str(i)).group()].append(Path(i))
         
         # Only using this as indicator, not as tracking failed files
         failed_folders_count = 0 
@@ -100,12 +108,14 @@ def processing_results_files(config,myQA_logger):
     
         # Read in template xltx for MyQA and reuse here
         template = openpyxl.load_workbook(Path(config['parent_path'],"Results","Template.xltx"))
-
+        template_list = [make_df_from_openpyxl(template,x) for x in template.sheetnames]
+        template_dict = dict(zip(template.sheetnames,template_list))
+        template.close()
         for file in tqdm(list_of_results_files, smoothing=0.1):
-            processing_results_file(file,template)
+            processing_results_file(file,template_dict)
             myQA_logger.info(file)
 
-def processing_results_file(file,template):
+def processing_results_file(file,template_dict):
 
     # Assumes template is already prepped and in openpyxl format, don't make same assumption r.e. results file
 
@@ -114,12 +124,10 @@ def processing_results_file(file,template):
 
     try:    
         results_file = openpyxl.load_workbook(file)
-        results_list = [makde_df_from_openpyxl(results_file,x) for x in results_file.sheetnames]
+        results_list = [make_df_from_openpyxl(results_file,x) for x in results_file.sheetnames]
         results_dict = dict(zip(results_file.sheetnames,results_list))
+        results_file.close()
 
-        template_list = [makde_df_from_openpyxl(template,x) for x in template.sheetnames]
-        template_dict = dict(zip(template.sheetnames,template_list))
-        del results_file
     except:
         mylogger.exception(file)
     else:
@@ -127,7 +135,7 @@ def processing_results_file(file,template):
         check_temp = set(template_dict)
 
 
-        with pd.ExcelWriter(file_to_write_to) as writer:
+        with pd.ExcelWriter(file_to_write_to, engine="xlsxwriter") as writer:
             # For each sheet *actually* in the MPC results file
             for sheet_key,sheef_df in results_dict.items():
                 # Case handing of actual sheets names
