@@ -100,93 +100,97 @@ def processing_results_file(file,template):
 
     mylogger.info(file)
     file_to_write_to = file.replace('\Raw','') 
-    
-    results_file = openpyxl.load_workbook(file)
+    try:    
+        results_file = openpyxl.load_workbook(file)
+    except:
+        mylogger.exception(file)
+    else:
+        check_names = set(results_file.sheetnames)
+        check_temp = set(template.sheetnames)
 
-    check_names = set(results_file.sheetnames)
-    check_temp = set(template.sheetnames)
+        template_sheets = []
 
-    with pd.ExcelWriter(file_to_write_to) as writer:
-        # For each sheet *actually* in the MPC results file
-        for sheet in results_file.sheetnames:
-            ref_date = results_file[results_file.sheetnames[0]].cell(2,2).value
-            # Case handing of actual sheets names
-            # Could do this in a ResultsFile object to keep main tidy, but eh
-            if sheet == '6xMVkVEnhancedCouch' and '6xMVkV' in results_file.sheetnames:               
-                #Create new df from existing workbook using function to keep more tidy
-                template_df = makde_df_from_openpyxl(template, '6xMVkV')            
-                #As book is generator not list, need to force past the first item/val to extract vals in loop
-                try:
-                    values_6x = makde_df_from_openpyxl(results_file, '6xMVkV')
+        with pd.ExcelWriter(file_to_write_to) as writer:
+            # For each sheet *actually* in the MPC results file
+            for sheet in results_file.sheetnames:
+                ref_date = results_file[results_file.sheetnames[0]].cell(2,2).value
+                # Case handing of actual sheets names
+                # Could do this in a ResultsFile object to keep main tidy, but eh
+                if sheet == '6xMVkVEnhancedCouch' and '6xMVkV' in results_file.sheetnames:               
+                    #Create new df from existing workbook using function to keep more tidy
+                    template_df = makde_df_from_openpyxl(template, '6xMVkV')            
                     #As book is generator not list, need to force past the first item/val to extract vals in loop
-                    values_6xext = makde_df_from_openpyxl(results_file, '6xMVkVEnhancedCouch')
-                except AttributeError:
-                    mylogger.error('Seems to not have generated values df...break')
-                    break
-                else:
-                    for item in template_df.index:
-                        if 'Enhanced' in item:
-                            try:
-                                template_df.loc[item] = values_6xext.loc[item]
-                            except KeyError:
-                                mylogger.warning(f"{item} doesn't exist in sheet {sheet}")    
-                        else:
-                            try:
-                                template_df.loc[item] = values_6x.loc[item]
-                            except KeyError:
-                                mylogger.warning(f"{item} doesn't exist in sheet {sheet}")   
-                    check_names.add('6xMVkV')
-                    template_df.to_excel(writer,sheet_name='6xMVkV')
-                    # results_file.remove(results_file['6xMVkVEnhancedCouch'])
-    
-
-                
-            elif sheet == '6xMVkVEnhancedCouch' and '6xMVkV' not in results_file.sheetnames:
-            
-                template_df = makde_df_from_openpyxl(template, '6xMVkV')
-
-                try:
-                    values = makde_df_from_openpyxl(results_file, '6xMVkVEnhancedCouch')
-                    
-                except AttributeError:
-                    mylogger.error('Seems to not have generated values df...break')
-                    break
-                else:
-                    for item in template_df.index:
-                            try:
-                                template_df.loc[item] = values.loc[item]
-                            except KeyError:
-                                mylogger.warning(f"{item} doesn't exist in sheet {sheet}")
-                    check_names.add('6xMVkV')
-                    template_df.to_excel(writer,sheet_name="6xMVkV")
-
-                
-            elif sheet in template.sheetnames:
-                template_df = makde_df_from_openpyxl(template, sheet)
-
-                try:
-                    values = makde_df_from_openpyxl(results_file, sheet)
-                    
-                except AttributeError:
-                    mylogger.error('Seems to not have generated values df...break')
-
-                    break
-                else:
-                    for item in template_df.index:
-                            try:
-                                template_df.loc[item] = values.loc[item]
-                            except KeyError:
-                                mylogger.warning(f"{item} doesn't exist in sheet {sheet}")
-                    template_df.to_excel(writer,sheet_name=sheet)
-        else:
-            mylogger.warning(f"{sheet} not in template")
-            pass
+                    try:
+                        values_6x = makde_df_from_openpyxl(results_file, '6xMVkV')
+                        #As book is generator not list, need to force past the first item/val to extract vals in loop
+                        values_6xext = makde_df_from_openpyxl(results_file, '6xMVkVEnhancedCouch')
+                    except AttributeError:
+                        mylogger.error('Seems to not have generated values df...break')
+                        break
+                    else:
+                        for item in template_df.index:
+                            if 'Enhanced' in item:
+                                try:
+                                    template_df.loc[item] = values_6xext.loc[item]
+                                except KeyError:
+                                    mylogger.warning(f"{item} doesn't exist in sheet {sheet}")    
+                            else:
+                                try:
+                                    template_df.loc[item] = values_6x.loc[item]
+                                except KeyError:
+                                    mylogger.warning(f"{item} doesn't exist in sheet {sheet}")   
+                        check_names.add('6xMVkV')
+                        template_df.to_excel(writer,sheet_name='6xMVkV')
+                        # results_file.remove(results_file['6xMVkVEnhancedCouch'])
         
-        temp_not_in_result_file = check_temp-check_names
 
-        for sheet in temp_not_in_result_file:
-            template_df = makde_df_from_openpyxl(template, sheet)
-            template_df.to_excel(writer,sheet_name=sheet)
+                    
+                elif sheet == '6xMVkVEnhancedCouch' and '6xMVkV' not in results_file.sheetnames:
+                
+                    template_df = makde_df_from_openpyxl(template, '6xMVkV')
+
+                    try:
+                        values = makde_df_from_openpyxl(results_file, '6xMVkVEnhancedCouch')
+                        
+                    except AttributeError:
+                        mylogger.error('Seems to not have generated values df...break')
+                        break
+                    else:
+                        for item in template_df.index:
+                                try:
+                                    template_df.loc[item] = values.loc[item]
+                                except KeyError:
+                                    mylogger.warning(f"{item} doesn't exist in sheet {sheet}")
+                        check_names.add('6xMVkV')
+                        template_df.to_excel(writer,sheet_name="6xMVkV")
+
+                    
+                elif sheet in template.sheetnames:
+                    template_df = makde_df_from_openpyxl(template, sheet)
+
+                    try:
+                        values = makde_df_from_openpyxl(results_file, sheet)
+                        
+                    except AttributeError:
+                        mylogger.error('Seems to not have generated values df...break')
+
+                        break
+                    else:
+                        for item in template_df.index:
+                                try:
+                                    template_df.loc[item] = values.loc[item]
+                                except KeyError:
+                                    mylogger.warning(f"{item} doesn't exist in sheet {sheet}")
+                        template_df.to_excel(writer,sheet_name=sheet)
+            else:
+                mylogger.warning(f"{sheet} not in template")
+                pass
+            
+            temp_not_in_result_file = check_temp-check_names
+
+            for sheet in temp_not_in_result_file:
+                template_df = makde_df_from_openpyxl(template, sheet)
+                template_df.to_excel(writer,sheet_name=sheet)
 
     
 def logging_handler(logger,file_name: str,opts: str):
